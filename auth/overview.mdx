@@ -1,21 +1,32 @@
 ---
-title: "Authentication in Wordle Backend"
+title: "Wordle Backend Authentication and Security Overview"
 sidebarTitle: "Overview"
-description: "Wordle Backend uses stateless JWT authentication via Spring Security. Learn which endpoints are public, how tokens are issued, and how to pass them in requests."
+description: "Wordle Backend uses stateless JWT authentication with Spring Security. Learn which endpoints are public, how tokens are issued, and how to attach them."
 ---
 
 Wordle Backend implements **stateless JWT authentication** using Spring Security and JJWT. There is no server-side session state — every request is authenticated entirely by the token the client presents. When a user logs in, the server signs a JSON Web Token (HS256) containing the user's identity and role; the client stores that token and attaches it to any request that targets a protected resource.
 
 ## Endpoint access policy
 
+The table below reflects every `requestMatchers` rule declared in `SecurityConfig`, followed by the `anyRequest().authenticated()` catch-all that protects everything not listed.
+
 | Endpoint pattern | Method(s) | Auth required? |
 |---|---|---|
 | `/auth/**` | ALL | ❌ Public (`permitAll`) |
-| `/wordle/**` | GET, POST | ❌ Public (`permitAll`) |
 | `/usuario/**` | GET | ❌ Public (`permitAll`) |
-| `/usuario/sumarPuntos/{puntos}` | PUT | ✅ Bearer token required |
+| `/wordle/**` | GET, POST | ❌ Public (`permitAll`) |
+| `/publicacion/eliminarPublicacion` | GET | ❌ Public (`permitAll`) |
+| `/publicacion/eliminarComentario` | GET | ❌ Public (`permitAll`) |
+| `/publicacion/buscar` | GET | ❌ Public (`permitAll`) |
+| `/publicacion/**` | GET | ❌ Public (`permitAll`) |
+| `/chat/**` | GET, ALL | ❌ Public (`permitAll`) |
+| `/mensajes/**` | ALL | ❌ Public (`permitAll`) |
+| `/perfil/**` | GET | ❌ Public (`permitAll`) |
+| `/comentario/**` | GET | ❌ Public (`permitAll`) |
+| `/usuarios/banear` | GET | 🔒 Admin only (`hasAnyAuthority("true")`) |
+| Everything else (e.g. PUT `/usuario/**`) | ALL | ✅ Bearer token required (`anyRequest().authenticated()`) |
 
-All authentication and registration routes are fully open. Only score-update operations require a valid token.
+All authentication and registration routes are fully open. Any endpoint not matched by an explicit `permitAll` rule — including score-update operations — requires a valid bearer token.
 
 ## Passing the token in requests
 

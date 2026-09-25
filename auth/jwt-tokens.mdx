@@ -1,7 +1,7 @@
 ---
-title: "JWT Token Structure and Validation"
+title: "JWT Token Structure, Custom Claims, and Validation"
 sidebarTitle: "JWT Tokens"
-description: "Understand how Wordle Backend issues and validates HS256 JWT tokens, what claims they carry, and how the JWTFilter enforces authentication on protected routes."
+description: "Learn how Wordle Backend issues HS256 JWT tokens, what claims they carry, and how JWTFilter validates each request against protected routes."
 ---
 
 Wordle Backend issues **HS256-signed JSON Web Tokens** (JWT) upon successful login. A JWT consists of three Base64URL-encoded parts — header, payload, and signature — joined by dots. The payload carries all the identity and expiry information the server needs to authenticate subsequent requests without consulting a database or session store.
@@ -51,6 +51,9 @@ A token is valid for **3 hours** from `fecha_creacion`. Once `System.currentTime
 Every inbound HTTP request passes through the `JWTFilter`. The filter executes the following steps before Spring Security's authorization layer runs:
 
 <Steps>
+  <Step title="Short-circuit /auth routes">
+    If the request path contains `/auth`, the filter immediately passes the request down the chain without any token inspection. This keeps registration and login endpoints fully open.
+  </Step>
   <Step title="Extract the Authorization header">
     The filter reads the `Authorization` header from the incoming request. If the header is absent or does not start with `Bearer `, the filter chain proceeds without setting any authentication context.
   </Step>
@@ -61,17 +64,17 @@ Every inbound HTTP request passes through the `JWTFilter`. The filter executes t
     `jwtService.extractUsername()` parses the JWT, navigates into the `"TokenDataDTO"` claim, and returns the `username` field — without performing full signature validation yet.
   </Step>
   <Step title="Load the user from the database">
-    Using the extracted username, `UserDetailsService.loadUserByUsername()` fetches the full `UserDetails` object. If no matching user exists, authentication fails.
+    Using the extracted username, `UsuarioService.loadUserByUsername()` fetches the full `Usuario` object. If no matching user exists, authentication fails.
   </Step>
   <Step title="Validate the token">
     `jwtService.isTokenValid()` checks two conditions:
-    - The `username` in `TokenDataDTO` matches the loaded `UserDetails` principal name.
+    - The `username` in `TokenDataDTO` matches the loaded user's `nombre`.
     - The current time is before `fecha_expiracion` (the token has not expired).
 
     Both conditions must pass for the token to be considered valid.
   </Step>
   <Step title="Set the security context">
-    On successful validation, the filter constructs a `UsernamePasswordAuthenticationToken` (with the `UserDetails` object and its granted authorities) and stores it in `SecurityContextHolder`. Downstream filters and controllers then see the request as authenticated.
+    On successful validation, the filter constructs a `UsernamePasswordAuthenticationToken` using the user's username as the principal, the stored password as credentials, and the user's granted authorities. This token is stored in `SecurityContextHolder`, so downstream filters and controllers see the request as authenticated.
   </Step>
 </Steps>
 

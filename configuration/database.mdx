@@ -56,46 +56,26 @@ Wordle Backend persists users, game words, and Ignatian vocabulary in a PostgreS
   </Step>
 
   <Step title="Seed the Ignatian words table">
-    The Ignatian game mode draws from a curated list of spirituality-related Spanish words stored in `palabras_ignacianas`. Insert the initial seed data with:
+    The Ignatian game mode draws from a curated list of Ignatian-themed words stored in `palabras_ignacianas`. The seed script in `bbdd_diccionario.sql` inserts the full list and then immediately removes any word longer than seven characters, because the game requires exactly that maximum length. The surviving words are:
 
     ```sql
-    INSERT INTO diccionario.palabras_ignacianas (palabra) VALUES
-      ('gracia'),
-      ('gloria'),
-      ('jesus'),
-      ('anima'),
-      ('rezan'),
-      ('misas'),
-      ('padre'),
-      ('rezar'),
-      ('gozan'),
-      ('gozar'),
-      ('crear'),
-      ('crean'),
-      ('sabio'),
-      ('lirio'),
-      ('santa'),
-      ('santo'),
-      ('monje'),
-      ('dones'),
-      ('marta'),
-      ('belen'),
-      ('llora'),
-      ('llore'),
-      ('lloro'),
-      ('noche'),
-      ('Maria'),
-      ('altar'),
-      ('feria'),
-      ('credo'),
-      ('cielo'),
-      ('reino'),
-      ('fe'),
-      ('canon'),
-      ('canta'),
-      ('cante'),
-      ('canto');
+    INSERT INTO palabras_ignacianas (palabra) VALUES
+      ('Loyola'), ('Iñigo'), ('Jesuita'), ('Ejercicios'), ('Discernir'),
+      ('Manresa'), ('Montserrat'), ('Roma'), ('Peregrino'), ('Examen'),
+      ('Contemplacion'), ('Compañia'), ('Universidad'), ('Cristo'), ('Gloria'),
+      ('Mision'), ('Cruz'), ('Paris'), ('Xavier'), ('Venecia'), ('Jerusalen'),
+      ('Alcala'), ('Salamanca'), ('Humildad'), ('Conversion'), ('Caridad'),
+      ('Oracion'), ('Meditacion'), ('Silencio'), ('Libertad'), ('Entrega'),
+      ('Servir'), ('Sacerdote'), ('Evangelizar'), ('Apostolado'), ('Paciencia'),
+      ('Voluntad'), ('Esperanza'), ('Carisma'), ('Votos'), ('Justicia'),
+      ('Caliz'), ('Corazon'), ('Luz'), ('Peregrinacion'), ('Jesus'), ('Maria'),
+      ('Providencia'), ('Discipulo');
+
+    -- Remove words longer than 7 characters (game maximum)
+    DELETE FROM diccionario.palabras_ignacianas WHERE LENGTH(palabra) > 7;
     ```
+
+    After the DELETE, the words that remain in the table are: `Loyola`, `Iñigo`, `Jesuita`, `Manresa`, `Roma`, `Examen`, `Cristo`, `Gloria`, `Mision`, `Cruz`, `Paris`, `Xavier`, `Venecia`, `Alcala`, `Caridad`, `Oracion`, `Entrega`, `Servir`, `Carisma`, `Votos`, `Caliz`, `Corazon`, `Luz`, `Jesus`, `Maria`.
 
     Add or remove rows at any time — the game mode picks a random word from this table for each session.
   </Step>
@@ -133,9 +113,9 @@ jdbc:postgresql://{host}:{port}/{database}
 
 | Placeholder | Example |
 |---|---|
-| `{host}` | `dpg-cv7sjmin91rc739f04jg-a.frankfurt-postgres.render.com` |
+| `{host}` | `your-db-host.render.com` |
 | `{port}` | `5432` (PostgreSQL default; can be omitted if using the default) |
-| `{database}` | `diccionario_jx4e` |
+| `{database}` | `your-database-name` |
 
 <Note>
 All application tables live inside the `diccionario` schema within the target database. This is controlled by `spring.jpa.properties.hibernate.default_schema=diccionario`. If you rename the schema or point the application at a database where that schema does not exist, Hibernate will fail to resolve entity mappings and the application will not start.

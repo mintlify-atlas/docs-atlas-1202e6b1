@@ -1,7 +1,7 @@
 ---
 title: "POST /auth/login — Authenticate and Get JWT Token"
-sidebarTitle: "POST /auth/login"
-description: "POST /auth/login — Authenticates a player with their username and password. Returns a signed JWT token valid for 3 hours on success, or an error message on failure."
+sidebarTitle: "Login"
+description: "Authenticates a player with their username and password. Returns a signed JWT token valid for 3 hours on success, or an error message on failure."
 ---
 
 Authenticate an existing player and receive a signed JWT token for use on protected endpoints. Supply the player's registered username (`nombre`) and their plaintext password. On success the response contains a token valid for **3 hours**; on failure both fields are returned but `token` is `null`.

@@ -1,10 +1,10 @@
 ---
-title: "Wordle Backend: Spanish Wordle REST API"
+title: "Wordle Backend: Spring Boot Spanish Wordle REST API"
 sidebarTitle: "Introduction"
 description: "Wordle Backend is a Spring Boot REST API for a Spanish Wordle game with JWT auth, a 57,000-word dictionary, Ignatian word mode, and a live leaderboard."
 ---
 
-Wordle Backend is a production-ready REST API that powers a Spanish-language Wordle game. Built on **Spring Boot 3.4** and **Java 21**, it handles everything from user authentication and session management to word validation, guess scoring, and leaderboard tracking — giving front-end clients a clean, stateless HTTP interface to build on.
+Wordle Backend is a production-ready REST API that powers a Spanish-language Wordle game. Built on **Spring Boot 3.4.3** and **Java 21**, it handles everything from user authentication and session management to word validation, guess scoring, and leaderboard tracking — giving front-end clients a clean, stateless HTTP interface to build on.
 
 ## What the API Does
 
@@ -42,7 +42,7 @@ The API serves three core audiences:
 | Layer | Technology |
 |---|---|
 | Runtime | Java 21 (eclipse-temurin) |
-| Framework | Spring Boot 3.4 |
+| Framework | Spring Boot 3.4.3 |
 | Security | Spring Security + JJWT 0.11.5 |
 | Persistence | Spring Data JPA + PostgreSQL |
 | Build tool | Apache Maven (Maven Wrapper) |
@@ -68,7 +68,7 @@ The application is organised around three controller groups, a JWT security filt
 ┌───────▼───────┐  ┌────────▼───────┐  ┌───────▼────────┐
 │  Auth          │  │  Wordle        │  │  User          │
 │  Controller   │  │  Controller    │  │  Controller    │
-│  /auth/**     │  │  /wordle/**    │  │  /user/**      │
+│  /auth/**     │  │  /wordle/**    │  │  /usuario/**   │
 └───────┬───────┘  └────────┬───────┘  └───────┬────────┘
         │                   │                   │
         └───────────────────┼───────────────────┘
@@ -85,7 +85,7 @@ The application is organised around three controller groups, a JWT security filt
 
 - **Auth controllers** (`/auth/**`) handle registration and login, issuing signed JWT tokens on success.
 - **Wordle controllers** (`/wordle/**`) expose word retrieval, guess validation, and leaderboard endpoints. Most routes are protected and require a valid token.
-- **User controllers** (`/user/**`) let authenticated players query and update their own profile and statistics.
+- **User controllers** (`/usuario/**`) let authenticated players query and update their own profile and statistics.
 - **JWT filter** intercepts every request, extracts the `Authorization: Bearer <token>` header, validates the signature, and populates the Spring Security context before the request reaches any controller.
 - **JPA repositories** abstract all database access. Entities are mapped with Hibernate and projected with MapStruct DTOs to keep the API surface clean.
 

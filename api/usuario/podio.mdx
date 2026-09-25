@@ -1,6 +1,6 @@
 ---
-title: "GET /usuario/podio — Top-3 Player Leaderboard"
-sidebarTitle: "GET /usuario/podio"
+title: "GET /usuario/podio — Retrieve Top-3 Player Leaderboard"
+sidebarTitle: "Leaderboard"
 description: "GET /usuario/podio — Returns the top 3 players ranked by score in descending order. This endpoint is public and requires no authentication."
 ---
 
@@ -51,7 +51,7 @@ SELECT * FROM diccionario.usuario ORDER BY puntuacion DESC LIMIT 3
 ```
 
 <Warning>
-  This endpoint always returns exactly 3 entries. If fewer than 3 users are registered in the database, the controller will throw an `ArrayIndexOutOfBoundsException`. Ensure that at least 3 user accounts exist before calling this endpoint in any environment.
+  This endpoint always returns exactly 3 entries. If fewer than 3 users are registered in the database, the service will throw an `IndexOutOfBoundsException` (the repository returns a `List<Usuario>` and `List.get(i)` fails when the index is out of range). Ensure that at least 3 user accounts exist before calling this endpoint in any environment.
 </Warning>
 
 ## Common Use Cases

@@ -1,6 +1,6 @@
 ---
-title: "GET /usuario/loggeado — Get Authenticated User Profile"
-sidebarTitle: "GET /usuario/loggeado"
+title: "GET /usuario/loggeado — Fetch Authenticated User Profile"
+sidebarTitle: "Logged-In User"
 description: "GET /usuario/loggeado — Returns the username and score of the currently authenticated player by reading their username from the provided JWT token."
 ---
 
@@ -51,7 +51,7 @@ Returns a `UsuarioNombrePuntuacionDTO` object.
 | Condition | Result |
 |---|---|
 | Missing or malformed JWT token | `500 Internal Server Error` — `RuntimeException: Token JWT no presente o mal formado` |
-| User not found in database | `500 Internal Server Error` — `RuntimeException: Usuario no encontrado` |
+| User not found in database | `500 Internal Server Error` — `RuntimeException: ❌ Usuario no encontrado` |
 
 <Note>
   This endpoint queries the database on every call and always reflects the player's most up-to-date score in real time.

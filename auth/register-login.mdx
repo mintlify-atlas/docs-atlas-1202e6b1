@@ -1,7 +1,7 @@
 ---
-title: "Register and Log In via the Auth API"
+title: "Register and Log In with the Wordle Backend Auth API"
 sidebarTitle: "Register & Login"
-description: "Create a new user account with POST /auth/registro and obtain a JWT token with POST /auth/login. Includes request shapes, response schemas, and error cases."
+description: "Create a user account with POST /auth/registro and get a JWT via POST /auth/login. Covers request shapes, response schemas, and error cases."
 ---
 
 The Auth API exposes three public endpoints for account creation, authentication, and username availability checks. No token is needed to call any of these routes — they are all `permitAll` in the security configuration.

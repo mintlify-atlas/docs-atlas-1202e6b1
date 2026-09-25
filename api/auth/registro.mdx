@@ -1,7 +1,7 @@
 ---
 title: "POST /auth/registro — Register a New User"
-sidebarTitle: "POST /auth/registro"
-description: "POST /auth/registro — Creates a new player account. Accepts usuario and password fields, hashes the password with BCrypt, and returns the created user record."
+sidebarTitle: "Register User"
+description: "Creates a new player account using the usuario and password fields, hashes the password with BCrypt, and returns the full created Usuario record."
 ---
 
 Register a new player account in the Wordle backend. The server hashes the supplied password with BCrypt before persisting the record, so plaintext credentials are never stored. On success the newly created `Usuario` object is returned with a starting score of `0` and standard (non-admin) privileges.
@@ -32,7 +32,7 @@ curl -X POST http://localhost:8080/auth/registro \
 
 ## Response
 
-Returns the created `Usuario` entity.
+Returns the full `Usuario` entity as persisted in the database.
 
 <ResponseField name="id" type="integer">
   Auto-generated unique identifier for the new player.
@@ -40,6 +40,10 @@ Returns the created `Usuario` entity.
 
 <ResponseField name="nombre" type="string">
   The username that was registered, echoed back from the persisted record.
+</ResponseField>
+
+<ResponseField name="contraseña" type="string">
+  The BCrypt hash of the password. The plaintext value you sent is never stored — this field always contains the hashed form (e.g. `$2a$10$...`).
 </ResponseField>
 
 <ResponseField name="puntuacion" type="integer">
@@ -56,6 +60,7 @@ Returns the created `Usuario` entity.
 {
   "id": 1,
   "nombre": "jugador1",
+  "contraseña": "$2a$10$eImiTXuWVxfM37uY4JANjQ==...",
   "puntuacion": 0,
   "esAdmin": false
 }
@@ -70,5 +75,5 @@ Returns the created `Usuario` entity.
 | Duplicate username | `500 Internal Server Error` | PostgreSQL unique constraint violation — the chosen `usuario` is already registered. Check availability first with [`GET /auth/credencialDisponible`](/api/auth/credencial-disponible). |
 
 <Note>
-  Passwords are stored exclusively as BCrypt hashes. The plaintext password you send is never persisted and cannot be recovered from the stored hash.
+  Passwords are stored exclusively as BCrypt hashes. The plaintext password you send is never persisted and cannot be recovered from the stored hash. The `contraseña` field in the response is the hashed value.
 </Note>

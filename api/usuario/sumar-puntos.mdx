@@ -1,7 +1,7 @@
 ---
-title: "PUT /usuario/sumarPuntos/{puntos} — Add Points to Player Score"
-sidebarTitle: "PUT /usuario/sumarPuntos"
-description: "PUT /usuario/sumarPuntos/{puntos} — Adds the specified number of points to the authenticated player's cumulative score. Requires a valid JWT Bearer token."
+title: "PUT /usuario/sumarPuntos/{puntos} — Add Points to Score"
+sidebarTitle: "Add Points"
+description: "PUT /usuario/sumarPuntos/{puntos} — Adds the specified number of points to the authenticated player's cumulative score. Requires a valid JWT token."
 ---
 
 Adds a specified number of points to the authenticated player's cumulative score. The score is updated in the database immediately. This endpoint is called by the frontend after a completed game round to record the player's result.
@@ -14,7 +14,7 @@ Adds a specified number of points to the authenticated player's cumulative score
 
 Requires an `Authorization: Bearer <token>` header. Authentication is enforced at **two layers**:
 
-1. **Spring Security** — `PUT` requests fall under `.anyRequest().authenticated()` and are blocked at the filter level if no valid token is present, returning `403 Forbidden`.
+1. **Spring Security** — `PUT` requests fall under `.anyRequest().authenticated()` and are blocked at the filter level if no valid token is present, returning `401 Unauthorized`.
 2. **Service layer** — the service extracts `TokenDataDTO.username` from the JWT to identify and update the correct user record.
 
 ## Path Parameters
@@ -46,8 +46,9 @@ Returns `200 OK` with no response body.
 
 | Condition | Result |
 |---|---|
-| Missing or invalid token | `403 Forbidden` (Spring Security filter) |
-| Token present but malformed | `500 Internal Server Error` (service `RuntimeException`) |
+| Missing or invalid token | `401 Unauthorized` (Spring Security filter) |
+| Token present but malformed | `500 Internal Server Error` — `RuntimeException: Token JWT no presente o mal formado` |
+| User not found in database | `500 Internal Server Error` — `RuntimeException: ❌ Usuario no encontrado` |
 | Expired token | Authentication failure — request rejected |
 
 <Note>

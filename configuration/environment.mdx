@@ -12,7 +12,7 @@ Wordle Backend is a Spring Boot 3.4 application whose runtime behaviour is drive
 |---|---|---|
 | `spring.application.name` | `Wordle-Backend` | Logical name of the application, used in logs and actuator endpoints. |
 | `spring.datasource.url` | `jdbc:postgresql://<host>/<database>` | Full JDBC connection URL for the PostgreSQL instance. |
-| `spring.datasource.username` | `diccionario_user` | Database username used to authenticate the JDBC connection. |
+| `spring.datasource.username` | `<db-username>` | Database username used to authenticate the JDBC connection. |
 | `spring.datasource.password` | `<your-password>` | Password for the database user. Must be kept secret — never hardcode in source. |
 | `spring.datasource.driver-class-name` | `org.postgresql.Driver` | Fully-qualified PostgreSQL JDBC driver class. Included automatically by the `postgresql` dependency but can be set explicitly. |
 | `spring.jpa.properties.hibernate.default_schema` | `diccionario` | Hibernate will prefix all table references with this schema name, so entities resolve to `diccionario.usuario`, `diccionario.palabras`, etc. |

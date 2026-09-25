@@ -39,57 +39,67 @@ Authorization, Content-Type
 
 ## CORS and Security Configuration (Source)
 
-The full CORS and security setup lives in `SecurityConfig.java`:
+The full CORS and security setup lives in `SecurityConfig.java`. CORS is configured inline via a lambda passed directly to `cors()`, rather than through a separate `CorsConfigurationSource` bean:
 
 ```java
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JWTFilter jwtFilterChain;
+    private final AuthenticationProvider authenticationProvider;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .authorizeHttpRequests(auth -> auth
+            .csrf(AbstractHttpConfigurer::disable)
+            .cors(cors -> cors.configurationSource(request -> {
+                CorsConfiguration config = new CorsConfiguration();
+                config.setAllowedOriginPatterns(List.of(
+                    "https://wordle-frontend-6twl.onrender.com/",
+                    "https://localhost",
+                    "http://localhost:4200"
+                ));
+                config.setAllowedMethods(Arrays.asList(
+                    "GET", "POST", "PUT", "DELETE", "OPTIONS"
+                ));
+                config.setAllowedHeaders(Arrays.asList(
+                    "Authorization", "Content-Type"
+                ));
+                config.setAllowCredentials(true);
+                return config;
+            }))
+            .authorizeHttpRequests(req -> req
                 .requestMatchers("/auth/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/usuario/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/wordle/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/wordle/**").permitAll()
+                .requestMatchers(GET, "/usuario/**").permitAll()
+                .requestMatchers(GET, "/wordle/**").permitAll()
+                .requestMatchers(POST, "/wordle/**").permitAll()
+                .requestMatchers(GET, "/publicacion/**").permitAll()
+                .requestMatchers(GET, "/chat/**").permitAll()
+                .requestMatchers(GET, "/perfil/**").permitAll()
+                .requestMatchers(GET, "/comentario/**").permitAll()
+                .requestMatchers("/mensajes/**").permitAll()
                 .anyRequest().authenticated()
-            );
+            )
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(STATELESS)
+            )
+            .authenticationProvider(authenticationProvider)
+            .addFilterBefore(jwtFilterChain, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-            "https://wordle-frontend-6twl.onrender.com/",
-            "https://localhost",
-            "http://localhost:4200"
-        ));
-        configuration.setAllowedMethods(Arrays.asList(
-            "GET", "POST", "PUT", "DELETE", "OPTIONS"
-        ));
-        configuration.setAllowedHeaders(Arrays.asList(
-            "Authorization", "Content-Type"
-        ));
-        configuration.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 }
 ```
 
 ## How to Add a New Origin
 
-To allow an additional frontend domain (e.g. a staging environment or a custom domain), add the URL to the `setAllowedOriginPatterns` list in `corsConfigurationSource()`:
+To allow an additional frontend domain (e.g. a staging environment or a custom domain), add the URL to the `setAllowedOriginPatterns` list inside the `cors` lambda in `SecurityConfig.java`:
 
 ```java
-configuration.setAllowedOriginPatterns(Arrays.asList(
+config.setAllowedOriginPatterns(List.of(
     "https://wordle-frontend-6twl.onrender.com/",
     "https://localhost",
     "http://localhost:4200",
@@ -111,10 +121,15 @@ In production, restrict `allowedOriginPatterns` to your actual frontend domain o
 | `/wordle/**` | GET | Public — no authentication required |
 | `/wordle/**` | POST | Public — no authentication required |
 | `/usuario/**` | GET | Public — no authentication required |
+| `/publicacion/**` | GET | Public — no authentication required |
+| `/chat/**` | GET | Public — no authentication required |
+| `/perfil/**` | GET | Public — no authentication required |
+| `/comentario/**` | GET | Public — no authentication required |
+| `/mensajes/**` | Any | Public — no authentication required |
 | All other endpoints | Any | **Requires a valid JWT** |
 
 Authentication-protected endpoints expect an `Authorization: Bearer <token>` header. Tokens are issued by the `/auth/login` endpoint upon successful credential verification.
 
 <Note>
-CSRF protection is disabled (`csrf.disable()`) because the API is stateless — it uses JWT Bearer tokens rather than session cookies, so there is no session state for a cross-site request to hijack. Disabling CSRF is standard practice for token-authenticated REST APIs.
+CSRF protection is disabled (`AbstractHttpConfigurer::disable`) because the API is stateless — it uses JWT Bearer tokens rather than session cookies, so there is no session state for a cross-site request to hijack. Disabling CSRF is standard practice for token-authenticated REST APIs.
 </Note>

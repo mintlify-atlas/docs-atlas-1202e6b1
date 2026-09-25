@@ -1,7 +1,7 @@
 ---
-title: "GET /wordle/palabra/{numLetras} — Fetch a Random Spanish Word"
-sidebarTitle: "GET /wordle/palabra"
-description: "GET /wordle/palabra/{numLetras} — Returns a random Spanish word with exactly numLetras letters from the 57,000-word dictionary. No authentication required."
+title: "Random Spanish Word — GET /wordle/palabra/{numLetras}"
+sidebarTitle: "Palabra Aleatoria"
+description: "Returns a random Spanish word with exactly numLetras letters from the dictionary. The response uses the accent-free form. No authentication required."
 ---
 
 Returns a random Spanish word from the `diccionario.palabras` table that has exactly `numLetras` letters. This is the primary endpoint used to generate the target word at the start of each Wordle game session. No authentication is required.
@@ -48,7 +48,7 @@ Returns a `PalabraDTO` object.
 </Note>
 
 <Note>
-  Randomisation is performed using a `floor(random() * max(id))` SQL approach for query performance. As a side effect, if no word exists in the database with the requested length, the query may return an unexpected result or error. Ensure the dictionary is seeded with words of the desired length before calling this endpoint.
+  Randomisation is performed using a `floor(random() * max(id))` SQL approach for query performance. The length filter in the query applies to the `LENGTH(p.palabra)` column — the accented form — not the `sin_acentos` column. As a side effect, if no word exists in the database with the requested length, the query may return an unexpected result or error. Ensure the dictionary is seeded with words of the desired length before calling this endpoint.
 </Note>
 
 ## Practical Notes

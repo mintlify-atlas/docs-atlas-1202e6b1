@@ -1,7 +1,7 @@
 ---
-title: "GET /wordle/palabraExiste/{palabra} — Validate a Word Guess"
-sidebarTitle: "GET /wordle/palabraExiste"
-description: "GET /wordle/palabraExiste/{palabra} — Checks if a word exists in the Spanish dictionary. Case-insensitive. Returns true or false. Used to validate player guesses."
+title: "Validate a Guess — GET /wordle/palabraExiste/{palabra}"
+sidebarTitle: "Palabra Existe"
+description: "Checks whether a word exists in the Spanish dictionary using a case-insensitive match. Returns true if found, false if not. No authentication required."
 ---
 
 Checks whether a given word exists in the `diccionario.palabras` dictionary table. Returns a plain boolean — `true` if the word is found, `false` if it is not. The lookup is **case-insensitive**. This endpoint is called by the game UI to validate every player guess before evaluating it, preventing invalid or made-up words from being submitted. No authentication is required.

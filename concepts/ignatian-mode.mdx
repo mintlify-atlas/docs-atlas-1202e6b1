@@ -1,7 +1,7 @@
 ---
-title: "Ignatian Word Mode: Jesuit Vocabulary Set"
+title: "Ignatian Mode: Curated Jesuit Spirituality Word Set"
 sidebarTitle: "Ignatian Mode"
-description: "Wordle Backend includes a curated Ignatian word set based on Jesuit spirituality vocabulary. Learn how the palabraIgnaciana endpoint works and what words it contains."
+description: "Wordle Backend includes a curated Ignatian word set for Jesuit vocabulary. Learn how the palabraIgnaciana endpoint selects and returns words."
 ---
 
 Wordle Backend ships with a special game mode built around **Ignatian and Jesuit spirituality vocabulary**. Instead of drawing from the general 57,000-word Spanish dictionary, this mode selects from a hand-curated list of words drawn from the tradition of Saint Ignatius of Loyola and the Society of Jesus. It is designed for educational, retreat, or community contexts where the spiritual dimension of the vocabulary is intentional.
@@ -45,17 +45,6 @@ CREATE TABLE diccionario.palabras_ignacianas (
 
 Unlike the main `palabras` table, `palabras_ignacianas` stores only the single canonical form of each word — there is no separate `sin_acentos` column.
 
-## Word Length Constraint
-
-All words in the Ignatian set are **7 characters or fewer**. When the table was populated, any words exceeding this length were removed:
-
-```sql
-DELETE FROM diccionario.palabras_ignacianas
-WHERE LENGTH(palabra) > 7;
-```
-
-This constraint keeps the game playable within the standard Wordle format. Words like `"Ejercicios"` (10 characters) or `"Contemplacion"` (13 characters) are therefore not present in the active table, even though they are significant Ignatian terms.
-
 ## Endpoint
 
 ```
@@ -94,7 +83,7 @@ The random selection uses the same `floor(random() * max(id))` strategy as the s
 |---|---|---|
 | Word source | `diccionario.palabras` (~57,000 words) | `diccionario.palabras_ignacianas` (curated list) |
 | Length parameter | Required (`numLetras`) | **Not applicable** — fixed curated set |
-| Max word length | Up to 8 characters (import filter) | Up to 7 characters (enforced by DELETE) |
+| Max word length | Up to 8 characters (import filter) | No enforced limit — depends on table contents |
 | Vocabulary domain | General Spanish | Jesuit / Ignatian spirituality |
 | Endpoint | `GET /wordle/palabraAleatoria/{numLetras}` | `GET /wordle/palabraIgnaciana` |
 

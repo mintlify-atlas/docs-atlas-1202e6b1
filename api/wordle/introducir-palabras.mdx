@@ -1,7 +1,7 @@
 ---
-title: "POST /wordle/introducirPalabras — Bulk Import Words from File"
-sidebarTitle: "POST /wordle/introducirPalabras"
-description: "POST /wordle/introducirPalabras — Reads the es.txt dictionary file and imports Spanish words between 5 and 8 characters that don't already exist in the database."
+title: "Bulk Import Words — POST /wordle/introducirPalabras"
+sidebarTitle: "Introducir Palabras"
+description: "Reads es.txt line by line and imports Spanish words of 5–8 characters not already in the database. No request body. No authentication required."
 ---
 
 Reads the bundled `es.txt` Spanish dictionary file line by line and bulk-imports eligible words into the `diccionario.palabras` table. This is a **setup/maintenance endpoint** intended to seed the database on initial deployment. No authentication is required and no request body is expected.
@@ -14,7 +14,7 @@ Reads the bundled `es.txt` Spanish dictionary file line by line and bulk-imports
 
 The endpoint processes `src/main/resources/static/es.txt` and imports each line that satisfies both of the following conditions:
 
-- **Length between 5 and 8 characters** — words are accepted when `length > 4 && length < 9`. Words shorter than 5 or longer than 8 characters are skipped.
+- **Length strictly between 5 and 8 characters** — words are accepted when `length > 4 && length < 9`, meaning exactly 5, 6, 7, or 8 characters. Words shorter than 5 or longer than 8 characters are skipped.
 - **Not already present in the database** — each word is checked against the `sin_acentos` column in `diccionario.palabras` before insertion. Existing words are skipped, making the operation safe to run more than once.
 
 ## Example Request

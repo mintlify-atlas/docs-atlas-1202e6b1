@@ -1,5 +1,5 @@
 ---
-title: "Spanish Word Database: Structure and Queries"
+title: "Spanish Word Database: Queries, Validation, and Import"
 sidebarTitle: "Word Database"
 description: "Wordle Backend stores 57,000+ Spanish words in PostgreSQL. Learn how words are fetched by length, validated, and bulk-imported from a dictionary file."
 ---
@@ -74,6 +74,6 @@ src/main/resources/static/es.txt
 The import process applies these filters before inserting:
 
 1. **Length filter** — only words with **5 to 8 characters** (inclusive) are imported.
-2. **Duplicate check** — each candidate word is tested with `existsByPalabra` before insertion; duplicates are silently skipped.
+2. **Duplicate check** — each candidate word is tested with `existsPalabrasBySinAcentos` before insertion; duplicates are silently skipped.
 
 This endpoint is intended for one-time or periodic dictionary population and should be called by an administrator after deployment or when updating the word list.
