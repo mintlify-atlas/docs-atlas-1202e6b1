@@ -1,23 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "Wordle Backend",
+  "projectType": "api-service",
+  "projectName": "Wordle Backend",
+  "projectDescription": "A Spring Boot REST API that powers a Spanish-language Wordle game, providing word lookup, JWT-authenticated user accounts, and a leaderboard.",
   "theme": "luma",
-  "colors": {
-    "primary": "#4F7942",
-    "light": "#E8F5E2",
-    "dark": "#2B4A24"
-  },
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/ATDP21/Wordle-Backend"
-    }
-  },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/ATDP21/Wordle-Backend"
-    }
-  },
+  "primaryColor": "#4F7942",
+  "lightColor": "#E8F5E2",
+  "darkColor": "#2B4A24",
   "navigation": {
     "tabs": [
       {
@@ -88,5 +76,28 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "Random word retrieval by letter count from a 57 000+ word Spanish dictionary",
+    "Special Ignatian word mode (Jesuit-themed vocabulary)",
+    "Word validation — checks whether a guessed word exists in the dictionary",
+    "JWT-based stateless authentication with 3-hour token expiry",
+    "User registration and login with BCrypt password hashing",
+    "Point-accumulation system tied to authenticated users",
+    "Top-3 leaderboard (podio) endpoint",
+    "PostgreSQL persistence via Spring Data JPA",
+    "Dockerfile for containerised deployment (Render-compatible)"
+  ],
+  "publicApiSurface": [
+    "POST /auth/registro",
+    "POST /auth/login",
+    "GET /auth/credencialDisponible?usuario={nombre}",
+    "GET /wordle/palabra/{numLetras}",
+    "GET /wordle/palabraIgnaciana",
+    "GET /wordle/palabraExiste/{palabra}",
+    "POST /wordle/introducirPalabras",
+    "GET /usuario/loggeado",
+    "PUT /usuario/sumarPuntos/{puntos}",
+    "GET /usuario/podio"
+  ]
 }

@@ -1,47 +1,132 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get Started with Wordle Backend API"
+sidebarTitle: "Quickstart"
+description: "Learn how to register a user, obtain a JWT token, fetch a random Spanish word, and validate a guess against the Wordle Backend API in four steps."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+This guide walks you through the minimum steps needed to start playing with the Wordle Backend API. In under five minutes you will have a registered account, a JWT token in hand, a random Spanish word fetched from the dictionary, and a working guess-validation call.
 
 ## Prerequisites
 
-Before you begin, you must have:
+- A running instance of Wordle Backend — either [deployed locally with Docker](/deployment) or hosted on Render.
+- `curl` (or any HTTP client such as Postman, HTTPie, or a browser-based tool).
+- The base URL of your instance, for example `http://localhost:8080` or `https://your-app.onrender.com`.
 
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
+> Replace `http://localhost:8080` in every example below with your actual base URL.
 
-## Get started
+## Steps
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Register a new user">
+    Create a player account by sending a `POST` request to `/auth/registro` with a JSON body containing your chosen username (`usuario`) and password.
 
     ```bash
-    npm install your-package
+    curl -s -X POST http://localhost:8080/auth/registro \
+      -H "Content-Type: application/json" \
+      -d '{"usuario": "jugador1", "password": "secret123"}'
     ```
+
+    A successful response returns the new user record. If the username is already taken the API returns a `400 Bad Request`.
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
+
+  <Step title="Log in and obtain a JWT token">
+    Exchange your credentials for a signed JWT token by posting to `/auth/login`. Note that the login body uses `nombre` (not `usuario`) as the username field.
 
     ```bash
-    your-cli init
+    curl -s -X POST http://localhost:8080/auth/login \
+      -H "Content-Type: application/json" \
+      -d '{"nombre": "jugador1", "password": "secret123"}'
     ```
+
+    **Response:**
+
+    ```json
+    {
+      "token": "eyJ...",
+      "message": "Login success"
+    }
+    ```
+
+    Copy the value of `token` — you will pass it as a `Bearer` token in the `Authorization` header for every protected request.
+
+    <Tip>
+      Save the token to a shell variable so you don't have to paste it repeatedly:
+
+      ```bash
+      TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
+        -H "Content-Type: application/json" \
+        -d '{"nombre": "jugador1", "password": "secret123"}' \
+        | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+      ```
+
+      You can then use `$TOKEN` in all subsequent requests.
+    </Tip>
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+
+  <Step title="Fetch a random 5-letter Spanish word">
+    Request a random word of a specific length from the dictionary. Pass your JWT token in the `Authorization` header.
 
     ```bash
-    your-cli start
+    curl -s http://localhost:8080/wordle/palabra/5 \
+      -H "Authorization: Bearer $TOKEN"
     ```
+
+    **Response:**
+
+    ```json
+    {
+      "id": 42,
+      "palabra": "gatos"
+    }
+    ```
+
+    The `palabra` field contains the Spanish word. Change the path parameter (`5`) to retrieve words of a different length.
+  </Step>
+
+  <Step title="Validate a guess">
+    Check whether a given word exists in the dictionary using `GET /wordle/palabraExiste/{word}`. This is how the game confirms that a player's guess is a real Spanish word before scoring it.
+
+    ```bash
+    curl -s http://localhost:8080/wordle/palabraExiste/perro \
+      -H "Authorization: Bearer $TOKEN"
+    ```
+
+    **Response:**
+
+    ```json
+    true
+    ```
+
+    The endpoint returns `true` if the word exists in the dictionary and `false` otherwise.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Login — curl and JavaScript examples
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+<CodeGroup>
+
+```bash curl
+curl -s -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"nombre": "jugador1", "password": "secret123"}'
+```
+
+```javascript JavaScript (fetch)
+const response = await fetch("http://localhost:8080/auth/login", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    nombre: "jugador1",
+    password: "secret123",
+  }),
+});
+
+const { token, message } = await response.json();
+console.log("JWT token:", token);
+// Store `token` and attach it to future requests:
+// Authorization: `Bearer ${token}`
+```
+
+</CodeGroup>

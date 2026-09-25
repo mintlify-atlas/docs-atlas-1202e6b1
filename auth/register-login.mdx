@@ -1,0 +1,145 @@
+---
+title: "Register and Log In via the Auth API"
+sidebarTitle: "Register & Login"
+description: "Create a new user account with POST /auth/registro and obtain a JWT token with POST /auth/login. Includes request shapes, response schemas, and error cases."
+---
+
+The Auth API exposes three public endpoints for account creation, authentication, and username availability checks. No token is needed to call any of these routes — they are all `permitAll` in the security configuration.
+
+---
+
+## Register a new account
+
+<br />
+
+### `POST /auth/registro`
+
+Creates a new player account. The password is stored as a **BCrypt hash** — plain-text passwords are never persisted.
+
+#### Request body
+
+<ParamField body="usuario" type="string" required>
+  The desired username. Must be unique across all registered players.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The plain-text password. The server BCrypt-encodes it before saving.
+</ParamField>
+
+#### Example request
+
+```bash
+curl -X POST https://<host>/auth/registro \
+  -H "Content-Type: application/json" \
+  -d '{"usuario": "jugador1", "password": "s3cr3t"}'
+```
+
+#### Response
+
+Returns the newly created `Usuario` entity.
+
+<ResponseField name="id" type="integer">
+  Auto-generated primary key for the user record.
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  The username supplied at registration.
+</ResponseField>
+
+<ResponseField name="puntuacion" type="integer">
+  The player's cumulative score. Defaults to `0` for new accounts.
+</ResponseField>
+
+<ResponseField name="esAdmin" type="boolean">
+  Whether the account has admin privileges. Defaults to `false` for self-registered accounts.
+</ResponseField>
+
+```json
+{
+  "id": 42,
+  "nombre": "jugador1",
+  "puntuacion": 0,
+  "esAdmin": false
+}
+```
+
+---
+
+## Log in and obtain a token
+
+<br />
+
+### `POST /auth/login`
+
+Verifies the supplied credentials via `AuthenticationService.verifyPassword()` and, on success, returns a signed JWT.
+
+#### Request body
+
+<ParamField body="nombre" type="string" required>
+  The registered username.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The plain-text password to verify against the stored BCrypt hash.
+</ParamField>
+
+#### Example request
+
+```bash
+curl -X POST https://<host>/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"nombre": "jugador1", "password": "s3cr3t"}'
+```
+
+#### Response
+
+Returns an `AuthenticationResponseDTO` object.
+
+<ResponseField name="token" type="string">
+  The signed HS256 JWT. Pass this value in the `Authorization: Bearer <token>` header for protected requests. Valid for 3 hours from issuance.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  A human-readable status string. `"Login success"` on successful authentication; `"Invalid credentials"` when the password does not match.
+</ResponseField>
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "message": "Login success"
+}
+```
+
+---
+
+## Check username availability
+
+### `GET /auth/credencialDisponible?usuario={nombre}`
+
+Returns a `boolean` indicating whether a given username is free to register.
+
+| Return value | Meaning |
+|---|---|
+| `true` | The username is **available** — no account exists with that name |
+| `false` | The username is **taken** — choose a different one |
+
+#### Example request
+
+```bash
+curl "https://<host>/auth/credencialDisponible?usuario=jugador1"
+```
+
+#### Example response
+
+```
+false
+```
+
+---
+
+## Error cases
+
+| Scenario | Response |
+|---|---|
+| Wrong password on login | `200 OK` with `{"token": null, "message": "Invalid credentials"}` |
+| Username already registered on `/auth/registro` | Server error (constraint violation) — check availability with `GET /auth/credencialDisponible` first |

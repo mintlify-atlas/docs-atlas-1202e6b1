@@ -1,0 +1,142 @@
+---
+title: "PostgreSQL Database Setup and Schema"
+sidebarTitle: "Database"
+description: "Wordle Backend requires a PostgreSQL database with the diccionario schema. Learn how to provision the database, apply the schema, and seed the word tables."
+---
+
+Wordle Backend persists users, game words, and Ignatian vocabulary in a PostgreSQL database organised under a dedicated `diccionario` schema. This page walks you through provisioning the database, applying the DDL, seeding the word lists, and understanding how Hibernate's DDL auto-update interacts with the schema at runtime.
+
+## Requirements
+
+- **PostgreSQL 12 or later** (tested against the version available on Render's managed PostgreSQL service).
+- A database with any name (the connection URL in `application.properties` points to it directly).
+- A schema named exactly **`diccionario`** — Hibernate uses this name as the default prefix for every table it manages.
+
+## Schema Setup
+
+<Steps>
+  <Step title="Create the database and schema">
+    Connect to your PostgreSQL instance with a superuser or the target database user, then create the schema:
+
+    ```sql
+    -- Run once against your target database
+    CREATE SCHEMA IF NOT EXISTS diccionario;
+    ```
+
+    If you are using Render's managed PostgreSQL, the database is created for you automatically. You only need to run the `CREATE SCHEMA` statement via the **PSQL Command** tab in the Render dashboard, or via any SQL client pointed at the connection string.
+  </Step>
+
+  <Step title="Create the application tables">
+    Apply the following DDL to create the three tables used by the application. When `spring.jpa.hibernate.ddl-auto=update` is set, Hibernate will create these tables automatically on first startup — but running the DDL manually gives you full control over column types and constraints.
+
+    ```sql
+    -- User accounts
+    CREATE TABLE diccionario.usuario (
+      id          SERIAL PRIMARY KEY,
+      nombre      VARCHAR(50)  NOT NULL UNIQUE,
+      contraseña  VARCHAR(225) NOT NULL,
+      puntuacion  INTEGER      DEFAULT 0   NOT NULL,
+      es_admin    BOOLEAN      DEFAULT FALSE NOT NULL
+    );
+
+    -- Spanish word dictionary (used for validation and daily words)
+    CREATE TABLE diccionario.palabras (
+      id          SERIAL PRIMARY KEY,
+      palabra     VARCHAR(25) NOT NULL,
+      sin_acentos VARCHAR(25) NOT NULL,
+      sensible    VARCHAR(25) NOT NULL
+    );
+
+    -- Ignatian-themed words (used in the Ignatian game mode)
+    CREATE TABLE diccionario.palabras_ignacianas (
+      id      SERIAL PRIMARY KEY,
+      palabra VARCHAR(25) NOT NULL
+    );
+    ```
+  </Step>
+
+  <Step title="Seed the Ignatian words table">
+    The Ignatian game mode draws from a curated list of spirituality-related Spanish words stored in `palabras_ignacianas`. Insert the initial seed data with:
+
+    ```sql
+    INSERT INTO diccionario.palabras_ignacianas (palabra) VALUES
+      ('gracia'),
+      ('gloria'),
+      ('jesus'),
+      ('anima'),
+      ('rezan'),
+      ('misas'),
+      ('padre'),
+      ('rezar'),
+      ('gozan'),
+      ('gozar'),
+      ('crear'),
+      ('crean'),
+      ('sabio'),
+      ('lirio'),
+      ('santa'),
+      ('santo'),
+      ('monje'),
+      ('dones'),
+      ('marta'),
+      ('belen'),
+      ('llora'),
+      ('llore'),
+      ('lloro'),
+      ('noche'),
+      ('Maria'),
+      ('altar'),
+      ('feria'),
+      ('credo'),
+      ('cielo'),
+      ('reino'),
+      ('fe'),
+      ('canon'),
+      ('canta'),
+      ('cante'),
+      ('canto');
+    ```
+
+    Add or remove rows at any time — the game mode picks a random word from this table for each session.
+  </Step>
+
+  <Step title="Bulk-import the Spanish word list">
+    The general Wordle mode validates guesses against a full Spanish dictionary loaded from `es.txt` (bundled in the application's classpath). To populate the `palabras` table, send a single POST request to the bulk-import endpoint:
+
+    ```bash
+    POST /wordle/introducirPalabras
+    ```
+
+    The endpoint reads `es.txt`, parses each word, computes its accent-stripped (`sin_acentos`) and normalised (`sensible`) forms, and inserts every entry into `diccionario.palabras`. This only needs to be run once after a fresh database setup. The operation is idempotent provided there are no unique constraints on `palabra`.
+  </Step>
+</Steps>
+
+## Hibernate DDL Auto
+
+The application ships with:
+
+```properties
+spring.jpa.hibernate.ddl-auto=update
+```
+
+In `update` mode, Hibernate inspects the entity classes at startup and issues `ALTER TABLE` or `CREATE TABLE` statements as needed to align the database schema with the Java model. This is convenient for development — you can add a new field to an entity and the column appears in the database automatically on the next restart.
+
+<Note>
+For production workloads, consider switching to `validate` (Hibernate checks the schema matches the entities but makes no changes) or `none` (Hibernate does nothing). Pair either option with a proper migration tool such as **Flyway** or **Liquibase** to manage schema evolution safely.
+</Note>
+
+## Connection String Format
+
+```
+jdbc:postgresql://{host}:{port}/{database}
+```
+
+| Placeholder | Example |
+|---|---|
+| `{host}` | `dpg-cv7sjmin91rc739f04jg-a.frankfurt-postgres.render.com` |
+| `{port}` | `5432` (PostgreSQL default; can be omitted if using the default) |
+| `{database}` | `diccionario_jx4e` |
+
+<Note>
+All application tables live inside the `diccionario` schema within the target database. This is controlled by `spring.jpa.properties.hibernate.default_schema=diccionario`. If you rename the schema or point the application at a database where that schema does not exist, Hibernate will fail to resolve entity mappings and the application will not start.
+</Note>

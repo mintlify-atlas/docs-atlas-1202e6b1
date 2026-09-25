@@ -1,0 +1,99 @@
+---
+title: "JWT Token Structure and Validation"
+sidebarTitle: "JWT Tokens"
+description: "Understand how Wordle Backend issues and validates HS256 JWT tokens, what claims they carry, and how the JWTFilter enforces authentication on protected routes."
+---
+
+Wordle Backend issues **HS256-signed JSON Web Tokens** (JWT) upon successful login. A JWT consists of three Base64URL-encoded parts — header, payload, and signature — joined by dots. The payload carries all the identity and expiry information the server needs to authenticate subsequent requests without consulting a database or session store.
+
+---
+
+## Token claims
+
+The token payload contains a single custom claim keyed `"TokenDataDTO"`. Its value is a serialized `TokenDataDTO` object with the following fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `username` | string | The player's `nombre` (username) |
+| `rol` | string | The stringified value of the `esAdmin` boolean (e.g. `"false"` or `"true"`) |
+| `fecha_creacion` | long | Unix timestamp in milliseconds (`System.currentTimeMillis()`) at the moment the token was issued |
+| `fecha_expiracion` | long | `fecha_creacion + (1000 × 60 × 60 × 3)` — exactly 3 hours after issuance, in milliseconds |
+
+### Decoded payload example
+
+```json
+{
+  "TokenDataDTO": {
+    "username": "jugador1",
+    "rol": "false",
+    "fecha_creacion": 1718000000000,
+    "fecha_expiracion": 1718010800000
+  }
+}
+```
+
+---
+
+## Signing algorithm
+
+Tokens are signed with **HS256** (HMAC-SHA-256) using a key that is generated **ephemerally in memory** each time the application starts. There is no persistent key store — the signing key exists only for the lifetime of the running process.
+
+---
+
+## Token expiry
+
+A token is valid for **3 hours** from `fecha_creacion`. Once `System.currentTimeMillis()` exceeds `fecha_expiracion`, the token is rejected by `jwtService.isTokenValid()` and the request receives an authentication error. The client must call `POST /auth/login` again to obtain a fresh token.
+
+---
+
+## JWTFilter validation flow
+
+Every inbound HTTP request passes through the `JWTFilter`. The filter executes the following steps before Spring Security's authorization layer runs:
+
+<Steps>
+  <Step title="Extract the Authorization header">
+    The filter reads the `Authorization` header from the incoming request. If the header is absent or does not start with `Bearer `, the filter chain proceeds without setting any authentication context.
+  </Step>
+  <Step title="Strip the Bearer prefix">
+    The `Bearer ` prefix (seven characters including the trailing space) is removed to isolate the raw JWT string.
+  </Step>
+  <Step title="Extract the username from the token">
+    `jwtService.extractUsername()` parses the JWT, navigates into the `"TokenDataDTO"` claim, and returns the `username` field — without performing full signature validation yet.
+  </Step>
+  <Step title="Load the user from the database">
+    Using the extracted username, `UserDetailsService.loadUserByUsername()` fetches the full `UserDetails` object. If no matching user exists, authentication fails.
+  </Step>
+  <Step title="Validate the token">
+    `jwtService.isTokenValid()` checks two conditions:
+    - The `username` in `TokenDataDTO` matches the loaded `UserDetails` principal name.
+    - The current time is before `fecha_expiracion` (the token has not expired).
+
+    Both conditions must pass for the token to be considered valid.
+  </Step>
+  <Step title="Set the security context">
+    On successful validation, the filter constructs a `UsernamePasswordAuthenticationToken` (with the `UserDetails` object and its granted authorities) and stores it in `SecurityContextHolder`. Downstream filters and controllers then see the request as authenticated.
+  </Step>
+</Steps>
+
+<Warning>
+  Because the HS256 signing key is **ephemeral**, it is regenerated every time the server process restarts. Any token issued before a restart will fail signature verification immediately, regardless of its `fecha_expiracion`. Users will need to log in again after every server restart or redeployment.
+</Warning>
+
+---
+
+## Using the token in requests
+
+Attach the token returned by `POST /auth/login` to the `Authorization` header of every request to a protected endpoint:
+
+```http
+PUT /usuario/sumarPuntos/100 HTTP/1.1
+Host: <host>
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+
+```bash
+curl -X PUT "https://<host>/usuario/sumarPuntos/100" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9..."
+```
+
+Requests to protected endpoints that are missing this header, or that carry an expired or otherwise invalid token, will be rejected by Spring Security before reaching the controller.

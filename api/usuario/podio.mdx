@@ -1,0 +1,60 @@
+---
+title: "GET /usuario/podio — Top-3 Player Leaderboard"
+sidebarTitle: "GET /usuario/podio"
+description: "GET /usuario/podio — Returns the top 3 players ranked by score in descending order. This endpoint is public and requires no authentication."
+---
+
+Returns the top 3 players ranked by cumulative score in descending order. This public endpoint powers the in-game leaderboard — typically displayed on the end screen or a dedicated rankings page — and requires no authentication to call.
+
+## Endpoint
+
+**`GET /usuario/podio`** — No authentication required.
+
+## Request Parameters
+
+None.
+
+## Example Request
+
+```bash
+curl http://localhost:8080/usuario/podio
+```
+
+## Response
+
+Returns an array of exactly **3** `UsuarioNombrePuntuacionDTO` objects, ordered from highest to lowest score.
+
+<ResponseField name="nombre" type="string">
+  The username of the ranked player.
+</ResponseField>
+
+<ResponseField name="puntuacion" type="integer">
+  The player's cumulative score.
+</ResponseField>
+
+### Example Response
+
+```json
+[
+  { "nombre": "jugador1", "puntuacion": 350 },
+  { "nombre": "jugador2", "puntuacion": 210 },
+  { "nombre": "jugador3", "puntuacion": 95 }
+]
+```
+
+## Database Query
+
+The leaderboard is resolved with the following query against the `diccionario` schema:
+
+```sql
+SELECT * FROM diccionario.usuario ORDER BY puntuacion DESC LIMIT 3
+```
+
+<Warning>
+  This endpoint always returns exactly 3 entries. If fewer than 3 users are registered in the database, the controller will throw an `ArrayIndexOutOfBoundsException`. Ensure that at least 3 user accounts exist before calling this endpoint in any environment.
+</Warning>
+
+## Common Use Cases
+
+- Display a top-3 leaderboard on the game's end screen after each round.
+- Render a dedicated leaderboard or rankings page accessible from the main menu.

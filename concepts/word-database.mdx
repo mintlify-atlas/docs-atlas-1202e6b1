@@ -1,0 +1,79 @@
+---
+title: "Spanish Word Database: Structure and Queries"
+sidebarTitle: "Word Database"
+description: "Wordle Backend stores 57,000+ Spanish words in PostgreSQL. Learn how words are fetched by length, validated, and bulk-imported from a dictionary file."
+---
+
+The Wordle Backend maintains a PostgreSQL dictionary of over 57,000 Spanish words, stored in the `diccionario.palabras` table. This database powers word selection, validation, and bulk import — the three core operations that every game round depends on.
+
+## Database Schema
+
+The `palabras` table stores each word alongside its accent-stripped form and a sensitivity marker:
+
+```sql
+CREATE TABLE diccionario.palabras (
+    id        SERIAL PRIMARY KEY,
+    palabra   VARCHAR(25),
+    sin_acentos VARCHAR(25),
+    sensible  VARCHAR(25)
+);
+```
+
+## Word Columns
+
+| Column | Type | Description |
+|---|---|---|
+| `palabra` | `VARCHAR(25)` | The canonical Spanish word, including accent marks (e.g. `"canción"`). Used for validation lookups. |
+| `sin_acentos` | `VARCHAR(25)` | The accent-stripped version of the word (e.g. `"cancion"`). This is the value exposed to the game client. |
+| `sensible` | `VARCHAR(25)` | Sensitivity flag — used to mark words that may be inappropriate for certain audiences. |
+
+<Note>
+The `PalabraDTO` returned by every API endpoint that serves a word always populates the `palabra` field with the **`sin_acentos` value** — accents are stripped before the word reaches the client. The original accented form stays server-side in the `palabra` column.
+</Note>
+
+## Random Word Retrieval
+
+When the game requests a word of a given length, the backend calls `PalabraRepository.findPalabraAleatoria(numLetras)`, which runs the following native query:
+
+```sql
+SELECT *
+FROM diccionario.palabras p
+WHERE LENGTH(p.palabra) = :numLetras
+  AND id >= (
+      SELECT floor(random() * (SELECT max(id)::double precision FROM diccionario.palabras))
+  )
+ORDER BY id
+LIMIT 1;
+```
+
+This approach uses `floor(random() * max(id))` to pick a random starting ID and then selects the first matching row at or after that position. This is intentionally **faster than `ORDER BY RANDOM()`**, which would require a full table scan and sort on every request.
+
+The `:numLetras` parameter accepts any integer, but the standard game experience uses lengths between **5 and 8 characters** inclusive.
+
+## Word Validation
+
+To check whether a player's guess exists in the dictionary, the backend exposes the following check via `PalabraRepository.existsByPalabra`:
+
+```sql
+-- Equivalent logic (case-insensitive match on the palabra column)
+SELECT COUNT(*) > 0
+FROM diccionario.palabras
+WHERE LOWER(palabra) = LOWER(:palabra);
+```
+
+The comparison is **case-insensitive** — both sides are lowercased before matching — so guesses like `"Casa"` or `"CASA"` are treated identically to `"casa"`.
+
+## Bulk Import
+
+The `POST /wordle/introducirPalabras` endpoint triggers `introducirPalabrasNuevas()`, which reads the bundled dictionary file at:
+
+```
+src/main/resources/static/es.txt
+```
+
+The import process applies these filters before inserting:
+
+1. **Length filter** — only words with **5 to 8 characters** (inclusive) are imported.
+2. **Duplicate check** — each candidate word is tested with `existsByPalabra` before insertion; duplicates are silently skipped.
+
+This endpoint is intended for one-time or periodic dictionary population and should be called by an administrator after deployment or when updating the word list.

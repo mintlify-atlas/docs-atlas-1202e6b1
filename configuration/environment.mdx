@@ -1,0 +1,61 @@
+---
+title: "Environment Variables and Application Properties"
+sidebarTitle: "Environment"
+description: "Configure Wordle Backend's datasource connection, Hibernate schema, and JPA settings via Spring Boot application properties or environment variable overrides."
+---
+
+Wordle Backend is a Spring Boot 3.4 application whose runtime behaviour is driven entirely by `application.properties` (or equivalent environment variable overrides). The most critical settings control the PostgreSQL connection, the Hibernate schema mapping, and JPA lifecycle options. This page documents every property in use, how to override them without touching source code, and best practices for keeping credentials out of version control.
+
+## Configuration Properties
+
+| Property | Default / Example | Description |
+|---|---|---|
+| `spring.application.name` | `Wordle-Backend` | Logical name of the application, used in logs and actuator endpoints. |
+| `spring.datasource.url` | `jdbc:postgresql://<host>/<database>` | Full JDBC connection URL for the PostgreSQL instance. |
+| `spring.datasource.username` | `diccionario_user` | Database username used to authenticate the JDBC connection. |
+| `spring.datasource.password` | `<your-password>` | Password for the database user. Must be kept secret — never hardcode in source. |
+| `spring.datasource.driver-class-name` | `org.postgresql.Driver` | Fully-qualified PostgreSQL JDBC driver class. Included automatically by the `postgresql` dependency but can be set explicitly. |
+| `spring.jpa.properties.hibernate.default_schema` | `diccionario` | Hibernate will prefix all table references with this schema name, so entities resolve to `diccionario.usuario`, `diccionario.palabras`, etc. |
+| `spring.jpa.hibernate.ddl-auto` | `update` | Instructs Hibernate to automatically create or alter tables to match entity definitions on startup. Use `validate` or `none` in production. |
+| `spring.jpa.open-in-view` | `false` | Disables the Open Session in View anti-pattern, ensuring database connections are released after the service layer, not the HTTP response. |
+
+## Environment Variable Overrides
+
+Spring Boot automatically maps environment variables to properties by converting them to upper-case and replacing dots (`.`) and hyphens (`-`) with underscores (`_`). This means you can configure any property from your deployment platform's secrets UI without modifying `application.properties`.
+
+The three most important overrides for production deployments are:
+
+| Environment Variable | Equivalent Property |
+|---|---|
+| `SPRING_DATASOURCE_URL` | `spring.datasource.url` |
+| `SPRING_DATASOURCE_USERNAME` | `spring.datasource.username` |
+| `SPRING_DATASOURCE_PASSWORD` | `spring.datasource.password` |
+
+Set these variables in your hosting platform (e.g. Render, Railway, Fly.io) and Spring Boot will pick them up at startup — no code changes required.
+
+## Example `application.properties`
+
+Copy this template into `src/main/resources/application.properties` and replace every `<placeholder>` with your actual values:
+
+```properties
+spring.application.name=Wordle-Backend
+
+# --- DataSource ---
+spring.datasource.url=jdbc:postgresql://<host>:<port>/<database>
+spring.datasource.username=<db-username>
+spring.datasource.password=<db-password>
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# --- JPA / Hibernate ---
+spring.jpa.properties.hibernate.default_schema=diccionario
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.open-in-view=false
+```
+
+<Warning>
+Never commit real credentials to version control. Add `application.properties` (or any file containing secrets) to your `.gitignore`. Use environment variable overrides or a secrets manager instead.
+</Warning>
+
+<Tip>
+On **Render**, set `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD` in **Dashboard → Your Service → Environment**. For local development, create an `application-local.properties` file with your credentials, activate it with `--spring.profiles.active=local`, and add `application-local.properties` to `.gitignore` so it is never accidentally committed.
+</Tip>

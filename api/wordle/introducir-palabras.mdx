@@ -1,0 +1,40 @@
+---
+title: "POST /wordle/introducirPalabras — Bulk Import Words from File"
+sidebarTitle: "POST /wordle/introducirPalabras"
+description: "POST /wordle/introducirPalabras — Reads the es.txt dictionary file and imports Spanish words between 5 and 8 characters that don't already exist in the database."
+---
+
+Reads the bundled `es.txt` Spanish dictionary file line by line and bulk-imports eligible words into the `diccionario.palabras` table. This is a **setup/maintenance endpoint** intended to seed the database on initial deployment. No authentication is required and no request body is expected.
+
+## Endpoint
+
+`POST /wordle/introducirPalabras` — no authentication required. No request body.
+
+## What It Does
+
+The endpoint processes `src/main/resources/static/es.txt` and imports each line that satisfies both of the following conditions:
+
+- **Length between 5 and 8 characters** — words are accepted when `length > 4 && length < 9`. Words shorter than 5 or longer than 8 characters are skipped.
+- **Not already present in the database** — each word is checked against the `sin_acentos` column in `diccionario.palabras` before insertion. Existing words are skipped, making the operation safe to run more than once.
+
+## Example Request
+
+```bash
+curl -X POST http://localhost:8080/wordle/introducirPalabras
+```
+
+## Response
+
+Returns **HTTP 200 OK** with no response body.
+
+<Warning>
+  This is a **one-time setup operation**. Running it repeatedly is safe — duplicate words are detected and skipped — but it is unnecessary once the database has been seeded. Avoid calling this endpoint on a live, already-populated database unless you are deliberately adding new words to `es.txt`.
+</Warning>
+
+<Note>
+  The `es.txt` file must be present at `src/main/resources/static/es.txt` inside the running application. If the file is missing or the path is incorrect, the endpoint will fail to import any words. Verify the file is included in the packaged JAR before deploying.
+</Note>
+
+<Tip>
+  Only call this endpoint during **initial deployment** or after you have deliberately updated `es.txt` with additional vocabulary. In all other cases the dictionary is already fully seeded and this endpoint has no effect.
+</Tip>

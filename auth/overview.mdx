@@ -1,0 +1,41 @@
+---
+title: "Authentication in Wordle Backend"
+sidebarTitle: "Overview"
+description: "Wordle Backend uses stateless JWT authentication via Spring Security. Learn which endpoints are public, how tokens are issued, and how to pass them in requests."
+---
+
+Wordle Backend implements **stateless JWT authentication** using Spring Security and JJWT. There is no server-side session state — every request is authenticated entirely by the token the client presents. When a user logs in, the server signs a JSON Web Token (HS256) containing the user's identity and role; the client stores that token and attaches it to any request that targets a protected resource.
+
+## Endpoint access policy
+
+| Endpoint pattern | Method(s) | Auth required? |
+|---|---|---|
+| `/auth/**` | ALL | ❌ Public (`permitAll`) |
+| `/wordle/**` | GET, POST | ❌ Public (`permitAll`) |
+| `/usuario/**` | GET | ❌ Public (`permitAll`) |
+| `/usuario/sumarPuntos/{puntos}` | PUT | ✅ Bearer token required |
+
+All authentication and registration routes are fully open. Only score-update operations require a valid token.
+
+## Passing the token in requests
+
+Include the JWT in the `Authorization` header of every request to a protected endpoint:
+
+```http
+Authorization: Bearer <your-jwt-token>
+```
+
+The `JWTFilter` intercepts every request, reads this header, validates the token, and populates the Spring Security context if the token is valid.
+
+## Token lifetime
+
+Tokens are valid for **3 hours** from the moment of issuance. After expiry the client must call `POST /auth/login` again to obtain a fresh token.
+
+<Note>
+  The HS256 signing key is generated **fresh in memory each time the server starts**. This means all previously issued tokens are immediately invalidated on a server restart, even if they have not yet expired by their `fecha_expiracion` timestamp. Plan for re-authentication after any server reboot or redeployment.
+</Note>
+
+## Next steps
+
+- [Register & Login](/auth/register-login) — create an account and obtain a token via the Auth API
+- [JWT Tokens](/auth/jwt-tokens) — understand the token's claim structure and how `JWTFilter` validates it

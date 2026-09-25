@@ -1,0 +1,74 @@
+---
+title: "POST /auth/registro — Register a New User"
+sidebarTitle: "POST /auth/registro"
+description: "POST /auth/registro — Creates a new player account. Accepts usuario and password fields, hashes the password with BCrypt, and returns the created user record."
+---
+
+Register a new player account in the Wordle backend. The server hashes the supplied password with BCrypt before persisting the record, so plaintext credentials are never stored. On success the newly created `Usuario` object is returned with a starting score of `0` and standard (non-admin) privileges.
+
+**Method & path:** `POST /auth/registro` — no authentication required
+
+---
+
+## Request Body
+
+<ParamField body="usuario" type="string" required>
+  Unique username for the new account. Must be unique across all registered players; maximum 50 characters.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Plaintext password for the account. The server will BCrypt-hash this value before storing it — never send a pre-hashed password.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST http://localhost:8080/auth/registro \
+  -H "Content-Type: application/json" \
+  -d '{"usuario": "jugador1", "password": "secret123"}'
+```
+
+---
+
+## Response
+
+Returns the created `Usuario` entity.
+
+<ResponseField name="id" type="integer">
+  Auto-generated unique identifier for the new player.
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  The username that was registered, echoed back from the persisted record.
+</ResponseField>
+
+<ResponseField name="puntuacion" type="integer">
+  The player's score. Always `0` for a newly created account.
+</ResponseField>
+
+<ResponseField name="esAdmin" type="boolean">
+  Whether the account has administrator privileges. Always `false` for accounts created through this endpoint.
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "id": 1,
+  "nombre": "jugador1",
+  "puntuacion": 0,
+  "esAdmin": false
+}
+```
+
+---
+
+## Error Cases
+
+| Scenario | HTTP Status | Details |
+|---|---|---|
+| Duplicate username | `500 Internal Server Error` | PostgreSQL unique constraint violation — the chosen `usuario` is already registered. Check availability first with [`GET /auth/credencialDisponible`](/api/auth/credencial-disponible). |
+
+<Note>
+  Passwords are stored exclusively as BCrypt hashes. The plaintext password you send is never persisted and cannot be recovered from the stored hash.
+</Note>

@@ -1,0 +1,84 @@
+---
+title: "User Scoring and the Leaderboard"
+sidebarTitle: "Scoring"
+description: "Learn how Wordle Backend tracks player scores, how points are added via the authenticated sumarPuntos endpoint, and how the top-3 podio leaderboard works."
+---
+
+Wordle Backend provides a lightweight, additive scoring system. Each registered user accumulates a running point total that the frontend increments whenever a game is won. A public leaderboard endpoint surfaces the top three players at any time.
+
+## Score Model
+
+Player scores are stored directly on the `diccionario.usuario` table:
+
+```sql
+-- Relevant column on the usuario table
+puntuacion INTEGER DEFAULT 0
+```
+
+| Property | Detail |
+|---|---|
+| **Type** | `INTEGER` |
+| **Default** | `0` (new users start with zero points) |
+| **Maximum** | None — the column has no upper bound |
+| **Persistence** | Cumulative; points are never automatically reset |
+
+The backend does not impose any cap or decay on scores. Every call to `sumarPuntos` adds to the existing total.
+
+## Adding Points
+
+```
+PUT /usuario/sumarPuntos/{puntos}
+```
+
+| Parameter | Location | Description |
+|---|---|---|
+| `puntos` | Path variable | Number of points to add (positive integer) |
+| `Authorization` | Header | `Bearer <token>` — JWT required |
+
+**How it works:**
+1. The JWT is validated and the username is extracted from the token claims.
+2. The user record is fetched from the database by username.
+3. `puntos` is added to the current `puntuacion` value.
+4. The updated record is saved.
+
+**Example request:**
+
+```bash
+curl -X PUT http://localhost:8080/usuario/sumarPuntos/10 \
+  -H "Authorization: Bearer <token>"
+```
+
+A successful call returns HTTP `200 OK`. There is no response body.
+
+<Note>
+The backend does **not** implement any game logic — it has no concept of turns, guesses, or win conditions. The **frontend** is solely responsible for deciding how many points to award (e.g. fewer points for more attempts) and calling `sumarPuntos` once per completed game.
+</Note>
+
+## Leaderboard (Podio)
+
+```
+GET /usuario/podio
+```
+
+This is a **public endpoint** (no JWT required). It returns the top 3 users ranked by `puntuacion` in descending order as an array of `UsuarioNombrePuntuacionDTO` objects.
+
+**Response schema:**
+
+| Field | Type | Description |
+|---|---|---|
+| `nombre` | `String` | The player's display name |
+| `puntuacion` | `Integer` | Their total accumulated score |
+
+**Example response:**
+
+```json
+[
+  { "nombre": "jugador1", "puntuacion": 150 },
+  { "nombre": "jugador2", "puntuacion": 120 },
+  { "nombre": "jugador3", "puntuacion": 95 }
+]
+```
+
+<Warning>
+`GET /usuario/podio` is designed to **always return exactly 3 entries**. If fewer than 3 registered users exist in the database, the endpoint will throw an error. Ensure at least 3 user accounts are present before exposing the leaderboard in a production environment.
+</Warning>

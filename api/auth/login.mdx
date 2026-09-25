@@ -1,0 +1,90 @@
+---
+title: "POST /auth/login — Authenticate and Get JWT Token"
+sidebarTitle: "POST /auth/login"
+description: "POST /auth/login — Authenticates a player with their username and password. Returns a signed JWT token valid for 3 hours on success, or an error message on failure."
+---
+
+Authenticate an existing player and receive a signed JWT token for use on protected endpoints. Supply the player's registered username (`nombre`) and their plaintext password. On success the response contains a token valid for **3 hours**; on failure both fields are returned but `token` is `null`.
+
+**Method & path:** `POST /auth/login` — no authentication required
+
+---
+
+## Request Body
+
+<ParamField body="nombre" type="string" required>
+  The player's registered username.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The player's plaintext password. The server compares it against the stored BCrypt hash.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"nombre": "jugador1", "password": "secret123"}'
+```
+
+---
+
+## Response — Success
+
+Returns an `AuthenticationResponseDTO` with a signed JWT and a confirmation message.
+
+<ResponseField name="token" type="string">
+  A signed JWT token to include in the `Authorization` header of subsequent protected requests. Valid for 3 hours from the time of issue.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable result. On success this is always `"Login success"`.
+</ResponseField>
+
+### Example Response (success)
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "message": "Login success"
+}
+```
+
+---
+
+## Response — Failure
+
+When credentials are invalid the server still returns HTTP `200` but `token` is `null`.
+
+```json
+{
+  "token": null,
+  "message": "Invalid credentials"
+}
+```
+
+---
+
+## Using the Token
+
+Once you have a valid token, store it client-side and attach it to every request that requires authentication:
+
+```
+Authorization: Bearer <token>
+```
+
+For example:
+
+```bash
+curl http://localhost:8080/api/some-protected-endpoint \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9..."
+```
+
+<Note>
+  The JWT expires **3 hours** after it is issued. Once expired, the server will reject requests that include it. Re-authenticate via this endpoint to obtain a fresh token.
+</Note>
+
+<Warning>
+  The server generates its JWT signing key ephemerally at startup. **All tokens are invalidated whenever the server restarts.** Clients should handle `401 Unauthorized` responses gracefully and prompt the user to log in again.
+</Warning>

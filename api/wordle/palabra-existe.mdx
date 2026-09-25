@@ -1,0 +1,55 @@
+---
+title: "GET /wordle/palabraExiste/{palabra} — Validate a Word Guess"
+sidebarTitle: "GET /wordle/palabraExiste"
+description: "GET /wordle/palabraExiste/{palabra} — Checks if a word exists in the Spanish dictionary. Case-insensitive. Returns true or false. Used to validate player guesses."
+---
+
+Checks whether a given word exists in the `diccionario.palabras` dictionary table. Returns a plain boolean — `true` if the word is found, `false` if it is not. The lookup is **case-insensitive**. This endpoint is called by the game UI to validate every player guess before evaluating it, preventing invalid or made-up words from being submitted. No authentication is required.
+
+## Endpoint
+
+`GET /wordle/palabraExiste/{palabra}` — no authentication required.
+
+## Path Parameters
+
+<ParamField path="palabra" type="string" required>
+  The word to look up in the dictionary. The comparison is **case-insensitive** — `Perro`, `perro`, and `PERRO` are all treated as equivalent.
+</ParamField>
+
+## Example Requests
+
+```bash
+# Word exists
+curl http://localhost:8080/wordle/palabraExiste/perro
+# Word does not exist
+curl http://localhost:8080/wordle/palabraExiste/zzzzz
+```
+
+## Response
+
+Returns a raw JSON boolean — no wrapper object.
+
+| Value   | Meaning                                           |
+|---------|---------------------------------------------------|
+| `true`  | The word **exists** in `diccionario.palabras`.    |
+| `false` | The word **does not exist** in the dictionary.    |
+
+### Example Responses
+
+Word found:
+```
+true
+```
+
+Word not found:
+```
+false
+```
+
+<Note>
+  The dictionary lookup uses a case-insensitive `LOWER()` comparison on the `palabra` column, so the casing of the path segment you supply does not affect the result.
+</Note>
+
+## Typical Usage
+
+Call this endpoint to validate every player guess **before** running the letter-matching evaluation logic in the game UI. If the response is `false`, display an "invalid word" message and do not consume the player's attempt.

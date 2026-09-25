@@ -1,0 +1,58 @@
+---
+title: "GET /usuario/loggeado — Get Authenticated User Profile"
+sidebarTitle: "GET /usuario/loggeado"
+description: "GET /usuario/loggeado — Returns the username and score of the currently authenticated player by reading their username from the provided JWT token."
+---
+
+Returns the profile of the currently authenticated player. The service layer extracts the username from the provided JWT token, looks up the user in the database, and returns their current name and score.
+
+## Endpoint
+
+**`GET /usuario/loggeado`**
+
+## Authentication
+
+Requires an `Authorization: Bearer <token>` header. The service reads the JWT and extracts the username from the `TokenDataDTO.username` claim. Spring Security permits all `GET /usuario/**` requests at the filter level, but a valid token is effectively required — the service will throw a `RuntimeException` if the token is absent or malformed.
+
+## Request Parameters
+
+None.
+
+## Example Request
+
+```bash
+curl http://localhost:8080/usuario/loggeado \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9..."
+```
+
+## Response
+
+Returns a `UsuarioNombrePuntuacionDTO` object.
+
+<ResponseField name="nombre" type="string">
+  The username of the authenticated player.
+</ResponseField>
+
+<ResponseField name="puntuacion" type="integer">
+  The player's current cumulative score.
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "nombre": "jugador1",
+  "puntuacion": 150
+}
+```
+
+## Error Cases
+
+| Condition | Result |
+|---|---|
+| Missing or malformed JWT token | `500 Internal Server Error` — `RuntimeException: Token JWT no presente o mal formado` |
+| User not found in database | `500 Internal Server Error` — `RuntimeException: Usuario no encontrado` |
+
+<Note>
+  This endpoint queries the database on every call and always reflects the player's most up-to-date score in real time.
+</Note>

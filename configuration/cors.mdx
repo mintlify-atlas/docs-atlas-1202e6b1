@@ -1,0 +1,120 @@
+---
+title: "CORS and Security Configuration"
+sidebarTitle: "CORS & Security"
+description: "Configure cross-origin resource sharing for Wordle Backend. Learn the allowed origins, methods, and headers, and how to add your frontend's domain."
+---
+
+Wordle Backend uses Spring Security to enforce cross-origin resource sharing (CORS) rules and route-level access control. The CORS configuration is centralised in `SecurityConfig.java` and permits only a known set of origins, methods, and headers. All protected endpoints require a valid JWT — the API is fully stateless with no server-side sessions.
+
+## Allowed Origins
+
+Only the following origins are permitted to make cross-origin requests to the API:
+
+| Origin | Purpose |
+|---|---|
+| `https://wordle-frontend-6twl.onrender.com/` | Production frontend hosted on Render |
+| `https://localhost` | Local HTTPS development |
+| `http://localhost:4200` | Angular CLI dev server (default port) |
+
+## Allowed Methods
+
+```
+GET, POST, PUT, DELETE, OPTIONS
+```
+
+The `OPTIONS` method is included to support CORS preflight requests, which browsers send automatically before any credentialed cross-origin call.
+
+## Allowed Headers
+
+```
+Authorization, Content-Type
+```
+
+- **`Authorization`** — carries the JWT Bearer token for authenticated requests.
+- **`Content-Type`** — required for `POST` and `PUT` request bodies (typically `application/json`).
+
+## Credentials
+
+`allowCredentials = true` is set on the CORS configuration. This is required so that the browser forwards the `Authorization` header (and any cookies) with cross-origin requests. Note that when credentials are enabled, wildcard (`*`) origins are not permitted — every allowed origin must be listed explicitly.
+
+## CORS and Security Configuration (Source)
+
+The full CORS and security setup lives in `SecurityConfig.java`:
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/usuario/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/wordle/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/wordle/**").permitAll()
+                .anyRequest().authenticated()
+            );
+        return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "https://wordle-frontend-6twl.onrender.com/",
+            "https://localhost",
+            "http://localhost:4200"
+        ));
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS"
+        ));
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Authorization", "Content-Type"
+        ));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+}
+```
+
+## How to Add a New Origin
+
+To allow an additional frontend domain (e.g. a staging environment or a custom domain), add the URL to the `setAllowedOriginPatterns` list in `corsConfigurationSource()`:
+
+```java
+configuration.setAllowedOriginPatterns(Arrays.asList(
+    "https://wordle-frontend-6twl.onrender.com/",
+    "https://localhost",
+    "http://localhost:4200",
+    "https://your-new-domain.example.com"   // <-- add your origin here
+));
+```
+
+Rebuild and redeploy the application after making this change — CORS policies are applied at startup and cannot be updated at runtime without a restart.
+
+<Warning>
+In production, restrict `allowedOriginPatterns` to your actual frontend domain only. Leaving development origins such as `http://localhost:4200` in a production build does not pose a major risk on its own, but it is good practice to remove them to reduce the attack surface and avoid confusion.
+</Warning>
+
+## Endpoint Access Rules
+
+| URL Pattern | Method | Access |
+|---|---|---|
+| `/auth/**` | Any | Public — no authentication required |
+| `/wordle/**` | GET | Public — no authentication required |
+| `/wordle/**` | POST | Public — no authentication required |
+| `/usuario/**` | GET | Public — no authentication required |
+| All other endpoints | Any | **Requires a valid JWT** |
+
+Authentication-protected endpoints expect an `Authorization: Bearer <token>` header. Tokens are issued by the `/auth/login` endpoint upon successful credential verification.
+
+<Note>
+CSRF protection is disabled (`csrf.disable()`) because the API is stateless — it uses JWT Bearer tokens rather than session cookies, so there is no session state for a cross-site request to hijack. Disabling CSRF is standard practice for token-authenticated REST APIs.
+</Note>

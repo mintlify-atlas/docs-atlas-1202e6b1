@@ -1,0 +1,55 @@
+---
+title: "PUT /usuario/sumarPuntos/{puntos} — Add Points to Player Score"
+sidebarTitle: "PUT /usuario/sumarPuntos"
+description: "PUT /usuario/sumarPuntos/{puntos} — Adds the specified number of points to the authenticated player's cumulative score. Requires a valid JWT Bearer token."
+---
+
+Adds a specified number of points to the authenticated player's cumulative score. The score is updated in the database immediately. This endpoint is called by the frontend after a completed game round to record the player's result.
+
+## Endpoint
+
+**`PUT /usuario/sumarPuntos/{puntos}`**
+
+## Authentication
+
+Requires an `Authorization: Bearer <token>` header. Authentication is enforced at **two layers**:
+
+1. **Spring Security** — `PUT` requests fall under `.anyRequest().authenticated()` and are blocked at the filter level if no valid token is present, returning `403 Forbidden`.
+2. **Service layer** — the service extracts `TokenDataDTO.username` from the JWT to identify and update the correct user record.
+
+## Path Parameters
+
+<ParamField path="puntos" type="integer" required>
+  The number of points to add to the player's current score. Must be a positive integer.
+</ParamField>
+
+## Example Request
+
+```bash
+curl -X PUT http://localhost:8080/usuario/sumarPuntos/10 \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9..."
+```
+
+## Response
+
+Returns `200 OK` with no response body.
+
+## How It Works
+
+1. Extracts the JWT from the `Authorization` header.
+2. Reads `TokenDataDTO.username` from the decoded token.
+3. Fetches the corresponding user record from the database.
+4. Calculates the new score: `puntuacion = puntuacion + puntos`.
+5. Persists the updated user record to the database.
+
+## Error Cases
+
+| Condition | Result |
+|---|---|
+| Missing or invalid token | `403 Forbidden` (Spring Security filter) |
+| Token present but malformed | `500 Internal Server Error` (service `RuntimeException`) |
+| Expired token | Authentication failure — request rejected |
+
+<Note>
+  Points are strictly additive — there is no subtraction or reset endpoint. The frontend is responsible for determining how many points to award based on game outcome (e.g. number of attempts, win/loss).
+</Note>

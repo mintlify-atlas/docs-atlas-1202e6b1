@@ -1,0 +1,151 @@
+---
+title: "Deploy Wordle Backend with Docker or Render"
+sidebarTitle: "Deployment"
+description: "Step-by-step instructions for building and running the Wordle Backend Docker container locally or deploying it to Render as a web service."
+---
+
+Wordle Backend ships with a production-ready `Dockerfile` and works equally well as a local Docker container, a Render Web Service, or a plain JVM process started with the Maven Wrapper. Choose the method that matches your environment.
+
+## Prerequisites
+
+- **Docker** (for local container deployment) — [Install Docker](https://docs.docker.com/get-docker/)
+- **Java 21+** and **Maven** (for the bare-JVM method only)
+- A **PostgreSQL** database (local or hosted) with credentials ready
+- The repository cloned from GitHub
+
+---
+
+## Local Docker Deployment
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/<your-org>/wordle-backend.git
+    cd wordle-backend
+    ```
+  </Step>
+
+  <Step title="Set your environment variables">
+    The application reads database connection details from environment variables at runtime. Prepare the following three values from your PostgreSQL instance:
+
+    | Variable | Example value |
+    |---|---|
+    | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/wordle` |
+    | `SPRING_DATASOURCE_USERNAME` | `postgres` |
+    | `SPRING_DATASOURCE_PASSWORD` | `s3cr3t` |
+
+    You can export them in your shell for convenience:
+
+    ```bash
+    export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/wordle
+    export SPRING_DATASOURCE_USERNAME=postgres
+    export SPRING_DATASOURCE_PASSWORD=s3cr3t
+    ```
+  </Step>
+
+  <Step title="Build the Docker image">
+    The `Dockerfile` uses `eclipse-temurin:23-jdk` as its base, runs `./mvnw clean package -DskipTests` to produce the fat JAR, and then copies `target/Wordle-Backend-0.0.1-SNAPSHOT.jar` into the final image.
+
+    ```bash
+    docker build -t wordle-backend .
+    ```
+
+    The build takes a few minutes on first run while Maven downloads dependencies. Subsequent builds use Docker's layer cache.
+  </Step>
+
+  <Step title="Run the container">
+    Start the container, forwarding the host's port `8080` to the container's exposed port `8080`, and pass the database variables:
+
+    ```bash
+    docker run -p 8080:8080 \
+      -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/wordle \
+      -e SPRING_DATASOURCE_USERNAME=postgres \
+      -e SPRING_DATASOURCE_PASSWORD=s3cr3t \
+      wordle-backend
+    ```
+
+    > On Linux, replace `host.docker.internal` with the actual IP of your PostgreSQL host (e.g. `172.17.0.1` for the Docker bridge gateway) if your database is running on the host machine.
+
+    Once the Spring Boot banner appears and you see `Started WordleBackendApplication`, the API is live at `http://localhost:8080`.
+  </Step>
+</Steps>
+
+---
+
+## Render Deployment
+
+Render can build and run the Docker image directly from your GitHub repository with zero infrastructure management.
+
+1. **Push your code to GitHub.** Ensure the `Dockerfile` is committed at the repository root.
+
+2. **Create a new Web Service on Render.**
+   - Go to [https://render.com](https://render.com) and click **New → Web Service**.
+   - Connect your GitHub account and select the `wordle-backend` repository.
+   - Render detects the `Dockerfile` automatically. Leave the build command blank.
+
+3. **Set environment variables.** In the Render dashboard, open the **Environment** tab for the service and add:
+
+   | Key | Value |
+   |---|---|
+   | `SPRING_DATASOURCE_URL` | Your Render PostgreSQL internal URL, e.g. `jdbc:postgresql://<host>/<db>` |
+   | `SPRING_DATASOURCE_USERNAME` | Your database username |
+   | `SPRING_DATASOURCE_PASSWORD` | Your database password |
+   | `SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA` | Your schema name (if applicable) |
+
+   Render injects these as environment variables at container startup, overriding any defaults in `application.properties`.
+
+4. **Click Deploy.** Render builds the Docker image, runs the container, and assigns a public `*.onrender.com` URL. Health-check pings confirm the service is ready.
+
+---
+
+## Maven / Local JVM
+
+If you prefer to run the application without Docker, use the included Maven Wrapper:
+
+```bash
+# Set datasource environment variables first (see above), then:
+./mvnw spring-boot:run
+```
+
+Or build a fat JAR and run it directly:
+
+```bash
+./mvnw clean package -DskipTests
+java -jar target/Wordle-Backend-0.0.1-SNAPSHOT.jar
+```
+
+The server starts on port `8080` by default.
+
+---
+
+## Environment Variables Reference
+
+| Variable | Required | Description |
+|---|---|---|
+| `SPRING_DATASOURCE_URL` | ✅ Yes | JDBC URL for the PostgreSQL database, e.g. `jdbc:postgresql://localhost:5432/wordle`. Maps to `spring.datasource.url` in `application.properties`. |
+| `SPRING_DATASOURCE_USERNAME` | ✅ Yes | PostgreSQL user that owns the `wordle` database. Maps to `spring.datasource.username`. |
+| `SPRING_DATASOURCE_PASSWORD` | ✅ Yes | Password for the PostgreSQL user above. Maps to `spring.datasource.password`. |
+| `SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA` | ⚠️ Conditional | Sets the default Hibernate schema. Required if your tables live in a non-`public` schema. Maps to `spring.jpa.properties.hibernate.default_schema`. |
+
+---
+
+## Port
+
+The container exposes **port 8080** (declared via `EXPOSE 8080` in the `Dockerfile`). Map it to any host port you prefer:
+
+```bash
+# Map host port 9090 → container port 8080
+docker run -p 9090:8080 ... wordle-backend
+```
+
+The Spring Boot embedded Tomcat server also defaults to `8080` and can be overridden with:
+
+```bash
+-e SERVER_PORT=9090
+```
+
+---
+
+<Warning>
+  Never hardcode database credentials directly in `application.properties` for production deployments. Credentials committed to source control can leak through public repositories, build logs, and container image layers. Always supply secrets via environment variables, a secrets manager (e.g. AWS Secrets Manager, HashiCorp Vault), or your platform's secret store (e.g. Render's **Secret Files** feature).
+</Warning>

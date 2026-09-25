@@ -1,0 +1,56 @@
+---
+title: "GET /auth/credencialDisponible — Check Username Availability"
+sidebarTitle: "GET /auth/credencialDisponible"
+description: "GET /auth/credencialDisponible — Checks if a username is available for registration. Returns true if the username is free and false if it is already taken."
+---
+
+Check whether a given username is still available before attempting registration. The endpoint queries the player database and returns a plain boolean — `true` if the username is free, `false` if it is already taken by an existing account.
+
+**Method & path:** `GET /auth/credencialDisponible` — no authentication required
+
+---
+
+## Query Parameters
+
+<ParamField query="usuario" type="string" required>
+  The username to check for availability.
+</ParamField>
+
+### Example Request
+
+```bash
+curl "http://localhost:8080/auth/credencialDisponible?usuario=jugador1"
+```
+
+---
+
+## Response
+
+Returns a plain JSON boolean (no wrapping object).
+
+| Value | Meaning |
+|---|---|
+| `true` | The username is **available** — it has not been registered yet. |
+| `false` | The username is **taken** — an account with this name already exists. |
+
+### Example Response — available
+
+```
+true
+```
+
+### Example Response — taken
+
+```
+false
+```
+
+---
+
+## Common Use
+
+Call this endpoint as the player types their desired username during the sign-up flow. This provides immediate, real-time feedback before the user submits the full registration form, helping avoid the `500` constraint error that `POST /auth/registro` returns for duplicate usernames.
+
+<Tip>
+  Always call `GET /auth/credencialDisponible` before submitting [`POST /auth/registro`](/api/auth/registro). If this endpoint returns `false`, prompt the user to choose a different username immediately rather than waiting for a constraint violation from the database.
+</Tip>

@@ -1,0 +1,50 @@
+---
+title: "GET /wordle/palabraIgnaciana — Fetch a Random Ignatian Word"
+sidebarTitle: "GET /wordle/palabraIgnaciana"
+description: "GET /wordle/palabraIgnaciana — Returns a random word from the curated Ignatian vocabulary set. All Ignatian words are 7 characters or fewer. No authentication required."
+---
+
+Returns a random word from the curated `diccionario.palabras_ignacianas` table — a hand-picked set of vocabulary drawn from Ignatian spirituality and Jesuit tradition. This endpoint powers the **Ignatian Mode** of the Wordle game, where players guess words connected to the spirituality of St. Ignatius of Loyola. No authentication is required, and the endpoint accepts no path or query parameters.
+
+## Endpoint
+
+`GET /wordle/palabraIgnaciana` — no authentication required. No path or query parameters.
+
+## Example Request
+
+```bash
+curl http://localhost:8080/wordle/palabraIgnaciana
+```
+
+## Response
+
+Returns a `PalabraDTO` object.
+
+<ResponseField name="id" type="integer">
+  The database row ID of the word in `diccionario.palabras_ignacianas`.
+</ResponseField>
+
+<ResponseField name="palabra" type="string">
+  The randomly selected Ignatian word.
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "id": 7,
+  "palabra": "Manresa"
+}
+```
+
+## Sample Ignatian Vocabulary
+
+The `palabras_ignacianas` table contains words such as:
+
+> Loyola, Jesuita, Discernir, Manresa, Peregrino, Examen, Mision, Oracion, Silencio, Libertad, Apostolado, Caridad, Carisma
+
+<Note>
+  All words in the Ignatian set are **7 characters or fewer**. Words exceeding this length were removed from the table to remain compatible with the standard game board layout.
+</Note>
+
+For more context on how Ignatian Mode works within the game, see the [Ignatian Mode concept page](/concepts/ignatian-mode).

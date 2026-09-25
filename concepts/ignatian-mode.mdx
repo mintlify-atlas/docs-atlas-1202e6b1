@@ -1,0 +1,101 @@
+---
+title: "Ignatian Word Mode: Jesuit Vocabulary Set"
+sidebarTitle: "Ignatian Mode"
+description: "Wordle Backend includes a curated Ignatian word set based on Jesuit spirituality vocabulary. Learn how the palabraIgnaciana endpoint works and what words it contains."
+---
+
+Wordle Backend ships with a special game mode built around **Ignatian and Jesuit spirituality vocabulary**. Instead of drawing from the general 57,000-word Spanish dictionary, this mode selects from a hand-curated list of words drawn from the tradition of Saint Ignatius of Loyola and the Society of Jesus. It is designed for educational, retreat, or community contexts where the spiritual dimension of the vocabulary is intentional.
+
+## What Are Ignatian Words?
+
+The Ignatian word set consists of Spanish terms meaningful within Jesuit spirituality and the Ignatian tradition. Examples include:
+
+| Word | Meaning |
+|---|---|
+| Loyola | Birthplace of Saint Ignatius |
+| Jesuita | Jesuit (member of the Society of Jesus) |
+| Discernir | To discern (central Ignatian practice) |
+| Manresa | City where Ignatius wrote the Spiritual Exercises |
+| Montserrat | Monastery where Ignatius made a vigil of arms |
+| Peregrino | Pilgrim (Ignatius referred to himself this way) |
+| Examen | Daily examination of conscience |
+| Mision | Mission |
+| Caridad | Charity |
+| Oracion | Prayer |
+| Meditacion | Meditation |
+| Silencio | Silence |
+| Libertad | Freedom / Liberty |
+| Apostolado | Apostolate |
+| Paciencia | Patience |
+
+The full list resides in the `diccionario.palabras_ignacianas` table and can be extended by inserting rows directly.
+
+<Note>
+Ignatian mode is intended for spiritual formation, school retreats, parish communities, or any context where participants benefit from engaging with Jesuit vocabulary in a playful, game-based format. The words are drawn from centuries of Ignatian tradition and are suitable for all ages.
+</Note>
+
+## Database Schema
+
+```sql
+CREATE TABLE diccionario.palabras_ignacianas (
+    id      SERIAL PRIMARY KEY,
+    palabra VARCHAR(25)
+);
+```
+
+Unlike the main `palabras` table, `palabras_ignacianas` stores only the single canonical form of each word — there is no separate `sin_acentos` column.
+
+## Word Length Constraint
+
+All words in the Ignatian set are **7 characters or fewer**. When the table was populated, any words exceeding this length were removed:
+
+```sql
+DELETE FROM diccionario.palabras_ignacianas
+WHERE LENGTH(palabra) > 7;
+```
+
+This constraint keeps the game playable within the standard Wordle format. Words like `"Ejercicios"` (10 characters) or `"Contemplacion"` (13 characters) are therefore not present in the active table, even though they are significant Ignatian terms.
+
+## Endpoint
+
+```
+GET /wordle/palabraIgnaciana
+```
+
+Returns a single randomly selected word from the Ignatian set as a `PalabraDTO`.
+
+**Response schema (`PalabraDTO`):**
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `Integer` | Row ID from `palabras_ignacianas` |
+| `palabra` | `String` | The selected Ignatian word |
+
+**Example request:**
+
+```bash
+curl http://localhost:8080/wordle/palabraIgnaciana
+```
+
+**Example response:**
+
+```json
+{
+  "id": 7,
+  "palabra": "Manresa"
+}
+```
+
+The random selection uses the same `floor(random() * max(id))` strategy as the standard word endpoint — efficient and index-friendly.
+
+## Difference from Standard Mode
+
+| Feature | Standard Mode | Ignatian Mode |
+|---|---|---|
+| Word source | `diccionario.palabras` (~57,000 words) | `diccionario.palabras_ignacianas` (curated list) |
+| Length parameter | Required (`numLetras`) | **Not applicable** — fixed curated set |
+| Max word length | Up to 8 characters (import filter) | Up to 7 characters (enforced by DELETE) |
+| Vocabulary domain | General Spanish | Jesuit / Ignatian spirituality |
+| Endpoint | `GET /wordle/palabraAleatoria/{numLetras}` | `GET /wordle/palabraIgnaciana` |
+
+The absence of a length parameter in Ignatian mode is intentional: the set is small enough that filtering by length would severely limit variety. The frontend is expected to adapt its board size to match the length of whichever word is returned.

@@ -1,0 +1,94 @@
+---
+title: "Wordle Backend: Spanish Wordle REST API"
+sidebarTitle: "Introduction"
+description: "Wordle Backend is a Spring Boot REST API for a Spanish Wordle game with JWT auth, a 57,000-word dictionary, Ignatian word mode, and a live leaderboard."
+---
+
+Wordle Backend is a production-ready REST API that powers a Spanish-language Wordle game. Built on **Spring Boot 3.4** and **Java 21**, it handles everything from user authentication and session management to word validation, guess scoring, and leaderboard tracking — giving front-end clients a clean, stateless HTTP interface to build on.
+
+## What the API Does
+
+The API serves three core audiences:
+
+- **Game clients** (web or mobile) that need a daily or random Spanish word, want to validate guesses, and need to display a live leaderboard.
+- **Authenticated players** who register, log in, and track personal statistics across sessions.
+- **Administrators and developers** who want a self-hostable, containerisable backend they can extend or deploy to a cloud platform like Render in minutes.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="JWT Authentication" icon="lock">
+    Stateless, token-based security powered by Spring Security and JJWT 0.11.5. Every protected endpoint requires a signed Bearer token obtained at login.
+  </Card>
+  <Card title="57,000-Word Spanish Dictionary" icon="book">
+    A pre-loaded PostgreSQL dictionary of over 57,000 Spanish words. Words are filterable by length, enabling classic 5-letter Wordle gameplay and custom variants.
+  </Card>
+  <Card title="Ignatian Word Mode" icon="star">
+    A curated secondary word list inspired by Ignatian spirituality, providing a thematic daily-word mode alongside the standard random-word mode.
+  </Card>
+  <Card title="Live Leaderboard" icon="trophy">
+    A ranked leaderboard endpoint lets clients display top players in real time, sorted by score. Player statistics are persisted in PostgreSQL via Spring Data JPA.
+  </Card>
+  <Card title="Docker-Ready" icon="box">
+    A production Dockerfile is included. Build a self-contained image and run it anywhere Docker is available — locally, on a VPS, or on a managed container platform.
+  </Card>
+  <Card title="Render Deployment" icon="cloud">
+    First-class support for deploying to Render as a Web Service. Connect your GitHub repository and set three environment variables to go live in minutes.
+  </Card>
+</CardGroup>
+
+## Technology Stack
+
+| Layer | Technology |
+|---|---|
+| Runtime | Java 21 (eclipse-temurin) |
+| Framework | Spring Boot 3.4 |
+| Security | Spring Security + JJWT 0.11.5 |
+| Persistence | Spring Data JPA + PostgreSQL |
+| Build tool | Apache Maven (Maven Wrapper) |
+| Utilities | Lombok, MapStruct |
+| Containerisation | Docker |
+
+## Architecture Overview
+
+The application is organised around three controller groups, a JWT security filter, and a JPA persistence layer:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                        HTTP Clients                      │
+└───────────────────────────┬─────────────────────────────┘
+                            │
+              ┌─────────────▼──────────────┐
+              │      JWT Auth Filter        │
+              │  (validates Bearer tokens)  │
+              └─────────────┬──────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        │                   │                   │
+┌───────▼───────┐  ┌────────▼───────┐  ┌───────▼────────┐
+│  Auth          │  │  Wordle        │  │  User          │
+│  Controller   │  │  Controller    │  │  Controller    │
+│  /auth/**     │  │  /wordle/**    │  │  /user/**      │
+└───────┬───────┘  └────────┬───────┘  └───────┬────────┘
+        │                   │                   │
+        └───────────────────┼───────────────────┘
+                            │
+              ┌─────────────▼──────────────┐
+              │      JPA Repositories       │
+              │  (Spring Data / Hibernate)  │
+              └─────────────┬──────────────┘
+                            │
+              ┌─────────────▼──────────────┐
+              │         PostgreSQL          │
+              └─────────────────────────────┘
+```
+
+- **Auth controllers** (`/auth/**`) handle registration and login, issuing signed JWT tokens on success.
+- **Wordle controllers** (`/wordle/**`) expose word retrieval, guess validation, and leaderboard endpoints. Most routes are protected and require a valid token.
+- **User controllers** (`/user/**`) let authenticated players query and update their own profile and statistics.
+- **JWT filter** intercepts every request, extracts the `Authorization: Bearer <token>` header, validates the signature, and populates the Spring Security context before the request reaches any controller.
+- **JPA repositories** abstract all database access. Entities are mapped with Hibernate and projected with MapStruct DTOs to keep the API surface clean.
+
+<Note>
+  All words in the dictionary — and all game logic — are in **Spanish**. Guess validation, word length filtering, and Ignatian mode all operate exclusively on Spanish vocabulary. Clients should present the UI in Spanish or provide their own translation layer.
+</Note>
